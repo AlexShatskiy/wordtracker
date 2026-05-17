@@ -1,0 +1,7 @@
+{
+  "name": "wordtracker",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --parallel --filter './apps/*' dev"
+  }
+}
