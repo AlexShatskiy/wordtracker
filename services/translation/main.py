@@ -1,9 +1,13 @@
-from fastapi import FastAPI
 from dotenv import load_dotenv
 
 load_dotenv()
 
-app = FastAPI()
+from fastapi import FastAPI
+from router import router
+
+app = FastAPI(title="WordTracker Translation Service")
+app.include_router(router)
+
 
 @app.get("/health")
 async def health():
