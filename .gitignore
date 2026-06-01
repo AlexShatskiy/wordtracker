@@ -7,3 +7,6 @@ dist/
 __pycache__/
 .venv/
 .claude/settings.local.json
+design_handoff_wordtracker
+docs
+.DS_Store
