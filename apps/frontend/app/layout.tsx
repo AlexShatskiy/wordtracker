@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { ThemeProvider } from '../components/ThemeProvider'
+import { PairProvider } from '../lib/PairContext'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -19,11 +20,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="h-full bg-[var(--bg-base)]">
         <ThemeProvider>
-          <div className="h-full flex justify-center">
-            <div className="w-full max-w-[390px] h-full flex flex-col bg-[var(--bg-screen)] relative">
-              {children}
+          <PairProvider>
+            <div className="h-full flex justify-center">
+              <div className="w-full max-w-[390px] h-full flex flex-col bg-[var(--bg-screen)] relative">
+                {children}
+              </div>
             </div>
-          </div>
+          </PairProvider>
         </ThemeProvider>
       </body>
     </html>
