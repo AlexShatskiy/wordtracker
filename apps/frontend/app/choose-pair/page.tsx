@@ -11,7 +11,7 @@ const SwapIcon = ({ active }: { active: boolean }) => (
     height="14"
     viewBox="0 0 14 14"
     fill="none"
-    style={{ color: active ? 'var(--accent)' : 'var(--tx-hint)', flexShrink: 0 }}
+    style={{ color: active ? 'var(--accent)' : 'var(--text-hint)', flexShrink: 0 }}
   >
     <path
       d="M2 4.5h10M9 2l3 2.5-3 2.5M12 9.5H2M5 7l-3 2.5 3 2.5"
@@ -30,7 +30,7 @@ const CheckIcon = () => (
 )
 
 const SparkIcon = () => (
-  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style={{ color: 'var(--tx-hint)', flexShrink: 0 }}>
+  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style={{ color: 'var(--text-hint)', flexShrink: 0 }}>
     <path
       d="M8 1l1.8 5H15l-4.2 3 1.6 5L8 11l-4.4 3 1.6-5L1 6h5.2L8 1z"
       stroke="currentColor"
@@ -87,7 +87,7 @@ export default function ChoosePairPage() {
           style={{
             fontSize: 22,
             fontWeight: 500,
-            color: 'var(--tx-primary)',
+            color: 'var(--text-primary)',
             lineHeight: 1.25,
             margin: 0,
             textWrap: 'balance',
@@ -95,8 +95,8 @@ export default function ChoosePairPage() {
         >
           Which languages do you read in?
         </h1>
-        <p style={{ fontSize: 12.5, color: 'var(--tx-muted)', margin: 0, lineHeight: 1.5 }}>
-          Pick a pair to start — you can add more later.
+        <p style={{ fontSize: 12.5, color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>
+          Pick a pair to start. You can add more from the switcher anytime.
         </p>
       </div>
 
@@ -111,7 +111,7 @@ export default function ChoosePairPage() {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 10,
+                gap: 12,
                 padding: 14,
                 borderRadius: 14,
                 border: selected ? '1.5px solid var(--accent)' : '1px solid var(--border)',
@@ -125,10 +125,10 @@ export default function ChoosePairPage() {
               <SwapIcon active={selected} />
               <LangChip lang={p.to} size="md" />
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--tx-primary)' }}>
+                <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>
                   {LANG_NAMES[p.from]} ↔ {LANG_NAMES[p.to]}
                 </span>
-                <span style={{ fontSize: 11.5, color: 'var(--tx-hint)' }}>
+                <span style={{ fontSize: 11.5, color: 'var(--text-hint)' }}>
                   Two-way · auto-detected as you type
                 </span>
               </div>
@@ -160,13 +160,13 @@ export default function ChoosePairPage() {
           alignItems: 'flex-start',
           gap: 8,
           padding: '10px 12px',
-          borderRadius: 12,
-          border: '1px dashed var(--border)',
+          borderRadius: 10,
+          border: '1px solid var(--border)',
           background: 'var(--bg-card)',
         }}
       >
         <SparkIcon />
-        <p style={{ fontSize: 11, color: 'var(--tx-hint)', margin: 0, lineHeight: 1.5 }}>
+        <p style={{ fontSize: 11, color: 'var(--text-hint)', margin: 0, lineHeight: 1.5 }}>
           You can add Polish ↔ Russian or any other combination later — your word lists stay separate per pair.
         </p>
       </div>
