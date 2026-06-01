@@ -1,20 +1,42 @@
+'use client'
+import { useState } from 'react'
 import { AppHeader } from '../../components/AppHeader'
-import { TabBar } from '../../components/TabBar'
-import { WordList } from '../../components/WordList'
-import { QuickAddBar } from '../../components/QuickAddBar'
 import { BottomNav } from '../../components/BottomNav'
-import { mockWords } from '../../lib/mock'
+import { PairSwitcherSheet } from '../../components/PairSwitcherSheet'
+import { AddPairConfirmSheet } from '../../components/AddPairConfirmSheet'
+import { type Pair } from '../../lib/pairs'
 
 export default function WordsPage() {
+  const [pairSheetOpen, setPairSheetOpen] = useState(false)
+  const [confirmPair, setConfirmPair] = useState<Pair | null>(null)
+
   return (
-    <div className="flex flex-col h-full">
-      <AppHeader />
-      <TabBar />
-      <main className="flex-1 overflow-y-auto px-3 pt-4 pb-3">
-        <WordList words={mockWords} />
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <AppHeader
+        title="My Words"
+        subtitle="Sorted by lookup count"
+        onPairSwitcherOpen={() => setPairSheetOpen(true)}
+      />
+
+      <main style={{ flex: 1, overflowY: 'auto', padding: '4px 14px 14px' }}>
+        {/* Word list — added in step 19 */}
       </main>
-      <QuickAddBar />
-      <BottomNav />
+
+      <BottomNav onQuickAdd={() => {}} />
+
+      {pairSheetOpen && !confirmPair && (
+        <PairSwitcherSheet
+          onClose={() => setPairSheetOpen(false)}
+          onAddPair={(p) => setConfirmPair(p)}
+        />
+      )}
+      {confirmPair && (
+        <AddPairConfirmSheet
+          pair={confirmPair}
+          onConfirm={() => { setConfirmPair(null); setPairSheetOpen(false) }}
+          onCancel={() => setConfirmPair(null)}
+        />
+      )}
     </div>
   )
 }

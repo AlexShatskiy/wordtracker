@@ -1,34 +1,57 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { AppHeader } from '../components/AppHeader'
-import { TabBar } from '../components/TabBar'
-import { SearchInput } from '../components/SearchInput'
-import { LanguagePill } from '../components/LanguagePill'
-import { TranslationCard } from '../components/TranslationCard'
-import { QuickAddBar } from '../components/QuickAddBar'
 import { BottomNav } from '../components/BottomNav'
-import { mockTranslation } from '../lib/mock'
+import { SearchInput } from '../components/SearchInput'
+import { PairSwitcherSheet } from '../components/PairSwitcherSheet'
+import { AddPairConfirmSheet } from '../components/AddPairConfirmSheet'
+import { usePair } from '../lib/PairContext'
+import { type Pair } from '../lib/pairs'
 
 export default function TranslatePage() {
+  const router = useRouter()
+  const { pair } = usePair()
   const [query, setQuery] = useState('')
+  const [pairSheetOpen, setPairSheetOpen] = useState(false)
+  const [confirmPair, setConfirmPair] = useState<Pair | null>(null)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+    const stored = localStorage.getItem('wt-pair')
+    if (!stored) router.push('/choose-pair')
+  }, [router])
+
+  if (!mounted) return null
 
   return (
-    <div className="flex flex-col h-full">
-      <AppHeader />
-      <TabBar />
-      <main className="flex-1 overflow-y-auto px-3 pt-4 pb-3 flex flex-col gap-3">
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <AppHeader
+        subtitle="Good morning, Anna"
+        streak={5}
+        onPairSwitcherOpen={() => setPairSheetOpen(true)}
+      />
+
+      <main style={{ flex: 1, overflowY: 'auto', padding: '4px 14px 14px' }}>
         <SearchInput value={query} onChange={setQuery} />
-        <LanguagePill from="en" to="ru" />
-        <TranslationCard
-          term={mockTranslation.term}
-          lang={mockTranslation.lang}
-          phonetic={mockTranslation.phonetic}
-          translation={mockTranslation.translation}
-          examples={mockTranslation.examples}
-        />
       </main>
-      <QuickAddBar />
-      <BottomNav />
+
+      <BottomNav onQuickAdd={() => {}} />
+
+      {pairSheetOpen && !confirmPair && (
+        <PairSwitcherSheet
+          onClose={() => setPairSheetOpen(false)}
+          onAddPair={(p) => setConfirmPair(p)}
+        />
+      )}
+      {confirmPair && (
+        <AddPairConfirmSheet
+          pair={confirmPair}
+          onConfirm={() => { setConfirmPair(null); setPairSheetOpen(false) }}
+          onCancel={() => setConfirmPair(null)}
+        />
+      )}
     </div>
   )
 }
