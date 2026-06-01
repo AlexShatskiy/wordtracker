@@ -11,3 +11,18 @@ body {
   background-color: var(--bg-base);
   color: var(--tx-primary);
 }
+
+@keyframes wtSheetIn {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+@keyframes wtSheetFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes wtToastIn {
+  from { transform: translate(-50%, 6px); opacity: 0; }
+  to   { transform: translate(-50%, 0);   opacity: 1; }
+}
