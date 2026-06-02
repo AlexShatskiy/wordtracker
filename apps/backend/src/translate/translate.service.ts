@@ -2,15 +2,24 @@ import { Injectable, Logger } from '@nestjs/common';
 import { WordsService } from '../words/words.service';
 import { TranslationClient } from './translation-client';
 import { TranslateDto } from './dto/translate.dto';
-import { Lang, LANG_EN, LANG_RU } from '../lang';
+import { Lang, LANG_EN, LANG_RU, LANG_PL } from '../lang';
 import { getCorrelationId } from '../common/correlation.store';
 
 const CYRILLIC_RE = /[Ѐ-ӿ]/g;
+const POLISH_RE = /[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/;
 
 function detectLang(term: string): Lang {
   const matches = term.match(CYRILLIC_RE);
   const ratio = matches ? matches.length / term.length : 0;
-  return ratio > 0.5 ? LANG_RU : LANG_EN;
+  if (ratio > 0.3) return LANG_RU;
+  if (POLISH_RE.test(term)) return LANG_PL;
+  return LANG_EN;
+}
+
+function defaultTarget(lang: Lang): Lang {
+  if (lang === LANG_EN) return LANG_RU;
+  if (lang === LANG_RU) return LANG_EN;
+  return LANG_EN;
 }
 
 @Injectable()
@@ -22,17 +31,32 @@ export class TranslateService {
     private readonly client: TranslationClient,
   ) {}
 
-  translate(dto: TranslateDto) {
+  async translate(dto: TranslateDto) {
     const lang = dto.lang ?? detectLang(dto.term);
-    const cached = this.words.findInDB(dto.term, lang);
+    const targetLang = dto.targetLang ?? defaultTarget(lang);
 
-    if (cached) {
-      this.logger.debug(`[${getCorrelationId()}] cache hit term=${dto.term} lang=${lang}`);
-      return cached;
-    }
+    this.logger.log(`[${getCorrelationId()}] term=${dto.term} lang=${lang}→${targetLang}`);
+    const result = await this.client.translate(dto.term, lang, targetLang);
 
-    this.logger.log(`[${getCorrelationId()}] cache miss term=${dto.term} lang=${lang} — calling translation service`);
-    const result = this.client.translate(dto.term, lang);
-    return { term: dto.term, lang, ...result };
+    const stored = this.words.recordLookup({
+      term: dto.term,
+      lang,
+      targetLang,
+      translation: result.translation,
+      phonetic: result.phonetic,
+      examples: result.examples,
+    });
+
+    return {
+      id: stored.id,
+      term: stored.term,
+      lang: stored.lang,
+      targetLang: stored.targetLang,
+      phonetic: stored.phonetic,
+      translation: stored.translation,
+      examples: stored.examples,
+      lookups: stored.lookups,
+      source: result.source,
+    };
   }
 }

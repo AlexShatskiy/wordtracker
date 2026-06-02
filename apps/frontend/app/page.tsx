@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { AppHeader } from '../components/AppHeader'
 import { BottomNav } from '../components/BottomNav'
@@ -8,20 +8,15 @@ import { FrequencyBadge } from '../components/FrequencyBadge'
 import { PairSwitcherSheet } from '../components/PairSwitcherSheet'
 import { AddPairConfirmSheet } from '../components/AddPairConfirmSheet'
 import { QuickAddSheet } from '../components/QuickAddSheet'
-import { WordDetailSheet } from '../components/WordDetailSheet'
+import { WordDetailSheet, type WordDetail } from '../components/WordDetailSheet'
 import { usePair } from '../lib/PairContext'
-import { LANG_NAMES, type Pair } from '../lib/pairs'
-import { SAMPLE_WORDS, detectLang, findResult, type Word } from '../lib/words'
+import { LANG_NAMES, type Pair, type LangCode } from '../lib/pairs'
+import { detectLang } from '../lib/words'
+import { api, type TranslateResponse, type SavedWord } from '../lib/api'
 
 const BookmarkIcon = ({ filled }: { filled: boolean }) => (
   <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-    <path
-      d="M3 2.5h8v9.5L7 9.5l-4 2.5V2.5Z"
-      stroke="currentColor"
-      strokeWidth="1.4"
-      strokeLinejoin="round"
-      fill={filled ? 'currentColor' : 'none'}
-    />
+    <path d="M3 2.5h8v9.5L7 9.5l-4 2.5V2.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" fill={filled ? 'currentColor' : 'none'} />
   </svg>
 )
 
@@ -38,39 +33,29 @@ const ChevronRight = () => (
   </svg>
 )
 
-function RecentSection({ pair, onOpen }: { pair: Pair; onOpen: (w: Word) => void }) {
-  const recent = SAMPLE_WORDS
-    .filter(w => (w.lang === pair.from && w.target === pair.to) || (w.lang === pair.to && w.target === pair.from))
-    .slice(0, 4)
-
+function RecentSection({ words, onOpen }: { words: SavedWord[]; onOpen: (w: WordDetail) => void }) {
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '6px 4px 8px' }}>
-        <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-hint)', letterSpacing: '0.07em' }}>
-          RECENT LOOKUPS
-        </span>
+        <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-hint)', letterSpacing: '0.07em' }}>RECENT LOOKUPS</span>
         <span style={{ fontSize: 11, color: 'var(--accent)' }}>This week</span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {recent.length === 0 ? (
-          <div style={{
-            background: 'var(--bg-card)', border: '1px solid var(--border)',
-            borderRadius: 14, padding: '24px 14px', textAlign: 'center',
-          }}>
+        {words.length === 0 ? (
+          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '24px 14px', textAlign: 'center' }}>
             <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>No words in this pair yet.</div>
             <div style={{ fontSize: 11.5, color: 'var(--text-hint)', marginTop: 4 }}>Look one up above to get started.</div>
           </div>
-        ) : recent.map(w => (
+        ) : words.map(w => (
           <button key={w.id} onClick={() => onOpen(w)} style={{
-            background: 'var(--bg-card)', border: '1px solid var(--border)',
-            borderRadius: 14, padding: 12,
+            background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: 12,
             display: 'flex', alignItems: 'center', gap: 10,
             cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
           }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)' }}>{w.term}</span>
-                <LangChip lang={w.lang} size="sm" />
+                <LangChip lang={w.lang as LangCode} size="sm" />
               </div>
               <div style={{ fontSize: 11.5, color: 'var(--text-hint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 2 }}>
                 {w.translation}
@@ -91,36 +76,102 @@ export default function TranslatePage() {
 
   const [mounted, setMounted] = useState(false)
   const [query, setQuery] = useState('')
-  const [savedIds, setSavedIds] = useState<Set<string>>(() => new Set(['w1', 'w2', 'w4']))
+  const [result, setResult] = useState<TranslateResponse | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [recentWords, setRecentWords] = useState<SavedWord[]>([])
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set())
   const [toast, setToast] = useState('')
   const [pairSheetOpen, setPairSheetOpen] = useState(false)
   const [confirmPair, setConfirmPair] = useState<Pair | null>(null)
   const [quickAddOpen, setQuickAddOpen] = useState(false)
-  const [detailWord, setDetailWord] = useState<Word | null>(null)
+  const [detailWord, setDetailWord] = useState<WordDetail | null>(null)
+  const [offline, setOffline] = useState(false)
 
   useEffect(() => {
     setMounted(true)
-    if (!localStorage.getItem('wt-pair')) router.push('/choose-pair')
+    if (!localStorage.getItem('wt-onboarding-done')) { router.push('/onboarding'); return }
+    if (!localStorage.getItem('wt-pair')) { router.push('/choose-pair'); return }
+
+    const onOnline  = () => setOffline(false)
+    const onOffline = () => setOffline(true)
+    window.addEventListener('online',  onOnline)
+    window.addEventListener('offline', onOffline)
+    setOffline(!navigator.onLine)
+    return () => {
+      window.removeEventListener('online',  onOnline)
+      window.removeEventListener('offline', onOffline)
+    }
   }, [router])
 
+  const loadWords = useCallback(() => {
+    if (!pair) return
+    api.listWords(pair.from, pair.to)
+      .then(res => {
+        setRecentWords(res.data.slice(0, 4))
+        setSavedIds(new Set(res.data.map(w => w.id)))
+      })
+      .catch(() => {})
+  }, [pair])
+
+  useEffect(() => { loadWords() }, [loadWords])
+
   const detected = useMemo(() => detectLang(query), [query])
-  const result = useMemo(() => pair ? findResult(query, pair) : null, [query, pair])
 
   const direction = useMemo(() => {
-    if (!pair) return { from: 'en' as const, to: 'ru' as const }
+    if (!pair) return { from: 'en' as LangCode, to: 'ru' as LangCode }
     if (detected === pair.from) return { from: pair.from, to: pair.to }
     if (detected === pair.to)   return { from: pair.to,   to: pair.from }
     return { from: pair.from, to: pair.to }
   }, [pair, detected])
 
-  function toggleSaved(word: Word) {
-    const wasSaved = savedIds.has(word.id)
-    setSavedIds(prev => {
-      const next = new Set(prev)
-      wasSaved ? next.delete(word.id) : next.add(word.id)
-      return next
-    })
-    showToast(wasSaved ? 'Removed from list' : 'Saved to My Words')
+  // Debounced translate
+  useEffect(() => {
+    const trimmed = query.trim()
+    if (!trimmed || !pair) { setResult(null); setLoading(false); return }
+    setLoading(true)
+    const timer = setTimeout(async () => {
+      try {
+        const res = await api.translate(trimmed, direction.from, direction.to)
+        setResult(res)
+      } catch {
+        setResult(null)
+      } finally {
+        setLoading(false)
+      }
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [query, direction, pair])
+
+  function bumpStreak() {
+    const today = new Date().toDateString()
+    const lastDay = localStorage.getItem('wt-streak-day')
+    if (lastDay === today) return
+    const current = parseInt(localStorage.getItem('wt-streak') ?? '0', 10)
+    const yesterday = new Date(Date.now() - 86400000).toDateString()
+    const next = lastDay === yesterday ? current + 1 : 1
+    localStorage.setItem('wt-streak', String(next))
+    localStorage.setItem('wt-streak-day', today)
+  }
+
+  async function toggleSaved(res: TranslateResponse) {
+    const wasSaved = savedIds.has(res.id)
+    try {
+      if (wasSaved) {
+        await api.unsaveWord(res.id)
+      } else {
+        await api.saveWord(res.id)
+        bumpStreak()
+      }
+      setSavedIds(prev => {
+        const next = new Set(prev)
+        wasSaved ? next.delete(res.id) : next.add(res.id)
+        return next
+      })
+      showToast(wasSaved ? 'Removed from list' : 'Saved to My Words')
+      loadWords()
+    } catch {
+      showToast('Error — try again')
+    }
   }
 
   function showToast(msg: string) {
@@ -136,13 +187,16 @@ export default function TranslatePage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
-      <AppHeader
-        subtitle="Good morning, Anna"
-        streak={7}
-        onPairSwitcherOpen={() => setPairSheetOpen(true)}
-      />
+      <AppHeader subtitle="Good morning, Anna" onPairSwitcherOpen={() => setPairSheetOpen(true)} />
 
       <main style={{ flex: 1, overflowY: 'auto', padding: '4px 14px 14px' }}>
+        {offline && (
+          <div style={{ padding: '8px 12px', borderRadius: 10, background: 'color-mix(in oklch, var(--warning) 12%, transparent)', color: 'var(--warning)', fontSize: 11.5, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M2 2l12 12M6.3 4.3A6 6 0 0 1 14 10M2 10a6 6 0 0 1 2.5-4.9M8 14v.01" /></svg>
+            Offline — showing cached results only
+          </div>
+        )}
+
         {/* Search input */}
         <div style={{ position: 'relative', marginBottom: 10 }}>
           <input
@@ -158,7 +212,7 @@ export default function TranslatePage() {
               fontFamily: 'inherit', boxSizing: 'border-box',
             }}
           />
-          <span style={{ position: 'absolute', right: 14, top: 14, color: 'var(--text-hint)', pointerEvents: 'none' }}>
+          <span style={{ position: 'absolute', right: 14, top: 14, color: loading ? 'var(--accent)' : 'var(--text-hint)', pointerEvents: 'none' }}>
             <SearchIcon />
           </span>
         </div>
@@ -166,22 +220,12 @@ export default function TranslatePage() {
         {/* Direction indicator */}
         {query && (
           <div style={{ display: 'flex', gap: 6, marginBottom: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: 5,
-              padding: '4px 8px 4px 4px', borderRadius: 100,
-              background: 'var(--accent-tint)',
-            }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 8px 4px 4px', borderRadius: 100, background: 'var(--accent-tint)' }}>
               <LangChip lang={direction.from} size="sm" />
               <span style={{ fontSize: 10, color: 'var(--accent)' }}>→</span>
               <LangChip lang={direction.to} size="sm" />
             </div>
-            <span style={{
-              display: 'inline-flex', alignItems: 'center',
-              padding: '4px 9px', borderRadius: 100,
-              background: 'var(--bg-card)', border: '1px solid var(--border)',
-              fontSize: 10, fontWeight: 600, letterSpacing: '0.06em',
-              color: 'var(--text-hint)',
-            }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 9px', borderRadius: 100, background: 'var(--bg-card)', border: '1px solid var(--border)', fontSize: 10, fontWeight: 600, letterSpacing: '0.06em', color: 'var(--text-hint)' }}>
               Detected · {LANG_NAMES[detected]}
             </span>
           </div>
@@ -189,85 +233,56 @@ export default function TranslatePage() {
 
         {/* Result card */}
         {result ? (
-          <div style={{
-            background: 'var(--bg-card)', border: '1px solid var(--border)',
-            borderRadius: 14, overflow: 'hidden',
-          }}>
+          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden' }}>
             <div style={{ padding: '14px 14px 12px' }}>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 22, fontWeight: 500, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
-                  {result.term}
-                </span>
-                <span style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--text-hint)' }}>
-                  {result.phonetic}
-                </span>
-                <div style={{ marginLeft: 'auto' }}>
-                  <FrequencyBadge count={result.lookups} />
-                </div>
+                <span style={{ fontSize: 22, fontWeight: 500, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>{result.term}</span>
+                <span style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--text-hint)' }}>{result.phonetic}</span>
+                <div style={{ marginLeft: 'auto' }}><FrequencyBadge count={result.lookups} /></div>
               </div>
-              <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--accent)', marginTop: 6, lineHeight: 1.4 }}>
-                {result.translation}
-              </div>
+              <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--accent)', marginTop: 6, lineHeight: 1.4 }}>{result.translation}</div>
             </div>
 
             <div style={{ height: 1, background: 'var(--border)' }} />
 
             <div style={{ padding: '12px 14px 14px' }}>
-              <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-hint)', letterSpacing: '0.07em', marginBottom: 8 }}>
-                EXAMPLES
-              </div>
+              <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-hint)', letterSpacing: '0.07em', marginBottom: 8 }}>EXAMPLES</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {result.examples.slice(0, 2).map((ex, i) => (
-                  <div key={i} style={{
-                    fontSize: 11.5, lineHeight: 1.5, color: 'var(--text-muted)',
-                    borderLeft: '2px solid var(--accent)', paddingLeft: 10,
-                  }}>
+                  <div key={i} style={{ fontSize: 11.5, lineHeight: 1.5, color: 'var(--text-muted)', borderLeft: '2px solid var(--accent)', paddingLeft: 10 }}>
                     {ex}
                   </div>
                 ))}
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 14, gap: 8 }}>
-                <button onClick={() => setDetailWord(result)} style={{
-                  background: 'transparent', border: 'none', cursor: 'pointer',
-                  color: 'var(--text-hint)', fontSize: 11.5, padding: 0,
-                  display: 'inline-flex', alignItems: 'center', gap: 4, fontFamily: 'inherit',
-                }}>
+                <button onClick={() => setDetailWord(result)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-hint)', fontSize: 11.5, padding: 0, display: 'inline-flex', alignItems: 'center', gap: 4, fontFamily: 'inherit' }}>
                   More examples <ChevronRight />
                 </button>
-                <button onClick={() => toggleSaved(result)} style={{
-                  background: 'var(--accent-tint)', color: 'var(--accent)',
-                  border: 'none', borderRadius: 100, padding: '7px 13px',
-                  fontSize: 11.5, fontWeight: 600, cursor: 'pointer',
-                  display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'inherit',
-                }}>
+                <button onClick={() => toggleSaved(result)} style={{ background: 'var(--accent-tint)', color: 'var(--accent)', border: 'none', borderRadius: 100, padding: '7px 13px', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'inherit' }}>
                   <BookmarkIcon filled={savedIds.has(result.id)} />
                   {savedIds.has(result.id) ? 'Saved' : 'Save'}
                 </button>
               </div>
             </div>
           </div>
-        ) : query ? (
-          <div style={{
-            background: 'var(--bg-card)', border: '1px solid var(--border)',
-            borderRadius: 14, padding: '28px 14px', textAlign: 'center',
-          }}>
-            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 6 }}>No match in cache.</div>
-            <div style={{ fontSize: 11.5, color: 'var(--text-hint)' }}>Translating with Gemini Flash…</div>
+        ) : query && !loading ? (
+          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '28px 14px', textAlign: 'center' }}>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>No result found.</div>
+          </div>
+        ) : query && loading ? (
+          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '28px 14px', textAlign: 'center' }}>
+            <div style={{ fontSize: 11.5, color: 'var(--text-hint)' }}>Translating…</div>
           </div>
         ) : pair ? (
-          <RecentSection pair={pair} onOpen={setDetailWord} />
+          <RecentSection words={recentWords} onOpen={setDetailWord} />
         ) : null}
       </main>
 
       <BottomNav onQuickAdd={() => setQuickAddOpen(true)} />
 
-      {/* Sheets */}
       {pairSheetOpen && !confirmPair && (
-        <PairSwitcherSheet
-          onClose={() => setPairSheetOpen(false)}
-          onAddPair={p => setConfirmPair(p)}
-        />
+        <PairSwitcherSheet onClose={() => setPairSheetOpen(false)} onAddPair={p => setConfirmPair(p)} />
       )}
       {confirmPair && (
         <AddPairConfirmSheet
@@ -284,25 +299,33 @@ export default function TranslatePage() {
         <QuickAddSheet
           pair={pair}
           onClose={() => setQuickAddOpen(false)}
-          onSave={word => {
-            setSavedIds(prev => new Set([...prev, word.id]))
+          onSave={id => {
+            setSavedIds(prev => new Set([...prev, id]))
             showToast('Saved to My Words')
+            loadWords()
           }}
         />
       )}
       {detailWord && (
-        <WordDetailSheet word={detailWord} onClose={() => setDetailWord(null)} />
+        <WordDetailSheet
+          word={detailWord}
+          onClose={() => setDetailWord(null)}
+          onRemove={savedIds.has(detailWord.id) ? async () => {
+            await api.unsaveWord(detailWord.id)
+            setDetailWord(null)
+            loadWords()
+            showToast('Removed from list')
+          } : undefined}
+        />
       )}
 
-      {/* Toast */}
       {toast && (
         <div style={{
           position: 'absolute', bottom: 110, left: '50%', transform: 'translateX(-50%)',
           background: 'var(--text-primary)', color: 'var(--bg-card)',
           padding: '8px 14px', borderRadius: 100, fontSize: 11.5, fontWeight: 500,
           zIndex: 100, boxShadow: '0 4px 14px rgba(0,0,0,0.18)',
-          animation: 'wtToastIn 0.25s ease-out',
-          whiteSpace: 'nowrap',
+          animation: 'wtToastIn 0.25s ease-out', whiteSpace: 'nowrap',
         }}>
           {toast}
         </div>

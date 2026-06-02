@@ -1,20 +1,49 @@
-import { Injectable } from '@nestjs/common';
-import { Lang, LANG_EN, LANG_RU } from '../lang';
+import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import axios from 'axios';
+import { Lang } from '../lang';
 
 export type TranslationResult = {
   translation: string;
+  phonetic: string;
   examples: string[];
-  source: 'mock';
+  source: string;
+};
+
+type PythonResponse = {
+  term: string;
+  lang: string;
+  translation: string;
+  phonetic: string;
+  examples: string[];
+  source: string;
 };
 
 @Injectable()
 export class TranslationClient {
-  translate(term: string, lang: Lang): TranslationResult {
-    const target = lang === LANG_EN ? LANG_RU : LANG_EN;
-    return {
-      translation: `[mock] ${term} → ${target}`,
-      examples: [`[mock] Example using "${term}" #1`, `[mock] Example using "${term}" #2`],
-      source: 'mock',
-    };
+  private readonly logger = new Logger(TranslationClient.name);
+  private readonly baseUrl: string;
+
+  constructor(private readonly config: ConfigService) {
+    this.baseUrl = this.config.get<string>('TRANSLATION_SERVICE_URL', 'http://localhost:8000');
+  }
+
+  async translate(term: string, lang: Lang, targetLang: Lang): Promise<TranslationResult> {
+    try {
+      const { data } = await axios.post<PythonResponse>(`${this.baseUrl}/translate`, {
+        term,
+        lang,
+        target_lang: targetLang,
+      });
+      return {
+        translation: data.translation,
+        phonetic: data.phonetic,
+        examples: data.examples,
+        source: data.source,
+      };
+    } catch (err) {
+      this.logger.error(`Translation service error for term=${term}: ${err}`);
+      throw new ServiceUnavailableException('Translation service unavailable');
+    }
   }
 }

@@ -1,12 +1,80 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 
-const seedPair = async (page: import('@playwright/test').Page) => {
+// ─── Mock API data ───────────────────────────────────────────────────────────
+
+const MOCK_WORDS = [
+  {
+    id: 'serendipity:en:ru', term: 'serendipity', lang: 'en', targetLang: 'ru',
+    phonetic: '/ˌsɛrənˈdɪpɪti/', translation: 'счастливая случайность',
+    examples: ['Finding that letter was pure serendipity.'], lookups: 17,
+    saved: true, lastSeenAt: new Date().toISOString(), addedAt: '2026-05-02T00:00:00.000Z', source: 'mock',
+  },
+  {
+    id: 'elated:en:ru', term: 'elated', lang: 'en', targetLang: 'ru',
+    phonetic: '/ɪˈleɪtɪd/', translation: 'восторженный',
+    examples: ['She was elated by the news.'], lookups: 3,
+    saved: false, lastSeenAt: new Date().toISOString(), addedAt: '2026-05-22T00:00:00.000Z', source: 'mock',
+  },
+  {
+    id: 'resilient:en:ru', term: 'resilient', lang: 'en', targetLang: 'ru',
+    phonetic: '/rɪˈzɪliənt/', translation: 'устойчивый',
+    examples: ['A resilient economy bounces back.'], lookups: 8,
+    saved: true, lastSeenAt: new Date().toISOString(), addedAt: '2026-05-12T00:00:00.000Z', source: 'mock',
+  },
+  {
+    id: 'obstoyatelstvo:ru:en', term: 'обстоятельство', lang: 'ru', targetLang: 'en',
+    phonetic: '[ɐpstɐˈjatʲɪlʲstvə]', translation: 'circumstance',
+    examples: ['Обстоятельства сложились удачно.'], lookups: 9,
+    saved: true, lastSeenAt: new Date().toISOString(), addedAt: '2026-05-05T00:00:00.000Z', source: 'mock',
+  },
+]
+
+const MOCK_SAVED = MOCK_WORDS.filter(w => w.saved)
+
+// ─── Route mock helpers ───────────────────────────────────────────────────────
+
+const API = 'http://localhost:3001'
+
+async function mockApi(page: Page) {
+  // Only intercept backend API requests, not frontend navigation
+  await page.route(`${API}/translate`, async route => {
+    const body = JSON.parse(route.request().postData() ?? '{}') as { term?: string }
+    const word = MOCK_WORDS.find(w => w.term.toLowerCase() === body.term?.toLowerCase().trim())
+    if (word) {
+      await route.fulfill({ json: word })
+    } else {
+      await route.fulfill({ status: 503, json: { message: 'unavailable' } })
+    }
+  })
+
+  await page.route(`${API}/words/save`, async route => {
+    await route.fulfill({ json: { data: { saved: true } } })
+  })
+
+  await page.route(/localhost:3001\/words\/\w+/, async route => {
+    if (route.request().method() === 'DELETE') {
+      await route.fulfill({ json: { data: { saved: false } } })
+    } else {
+      await route.fulfill({ json: { data: MOCK_SAVED } })
+    }
+  })
+
+  await page.route(/localhost:3001\/words(\?.*)?$/, async route => {
+    await route.fulfill({ json: { data: MOCK_SAVED } })
+  })
+}
+
+async function seedPair(page: Page) {
   await page.goto('/choose-pair')
   await page.evaluate(() => {
+    localStorage.setItem('wt-onboarding-done', '1')
     localStorage.setItem('wt-pair', JSON.stringify({ from: 'en', to: 'ru' }))
     localStorage.setItem('wt-pairs', JSON.stringify([{ from: 'en', to: 'ru' }]))
   })
+  await mockApi(page)
 }
+
+// ─── Tests ────────────────────────────────────────────────────────────────────
 
 test('choose-pair: shows all 3 pairs and enables Continue button on selection', async ({ page }) => {
   await page.goto('/choose-pair')
@@ -66,18 +134,18 @@ test('my words: stats tiles, filter by direction, and sort toggle', async ({ pag
   await seedPair(page)
   await page.goto('/words')
 
-  await expect(page.getByText('TOTAL')).toBeVisible()
-  // StatTile passes label="Stuck" — CSS textTransform uppercases visually but DOM keeps "Stuck"
+  // StatTile labels are lowercase in DOM; CSS text-transform is visual only
+  await expect(page.getByText('Total', { exact: true })).toBeVisible()
   await expect(page.getByText('Stuck', { exact: true })).toBeVisible()
-  await expect(page.getByText('TODAY')).toBeVisible()
+  await expect(page.getByText('Today', { exact: true })).toBeVisible()
 
   // filter EN→RU hides words from other pairs
   await page.getByRole('button', { name: 'EN → RU' }).click()
   await expect(page.getByText('обстоятельство')).not.toBeVisible()
 
-  // sort A-Z brings "elated" to top
+  // sort A-Z brings "resilient" before "serendipity"
   await page.getByRole('button', { name: /by count/i }).click()
-  const first = page.locator('button').filter({ hasText: /^elated/ }).first()
+  const first = page.locator('button').filter({ hasText: /^resilient/ }).first()
   await expect(first).toBeVisible()
 })
 

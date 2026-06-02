@@ -3,8 +3,8 @@ import { useMemo } from 'react'
 import { SheetOverlay } from './SheetOverlay'
 import { LangChip } from './LangChip'
 import { FrequencyBadge } from './FrequencyBadge'
-import { badgeTier, type Word } from '../lib/words'
-import { LANG_NAMES } from '../lib/pairs'
+import { badgeTier } from '../lib/words'
+import { type LangCode, LANG_NAMES } from '../lib/pairs'
 
 const ChevronLeft = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -20,10 +20,7 @@ const TrashIcon = () => (
 
 function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
-    <div style={{
-      padding: '10px 12px', borderRadius: 12,
-      background: 'var(--bg-card)', border: '1px solid var(--border)',
-    }}>
+    <div style={{ padding: '10px 12px', borderRadius: 12, background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
       <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>{value}</div>
       <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-hint)', letterSpacing: '0.07em', textTransform: 'uppercase', marginTop: 5 }}>{label}</div>
     </div>
@@ -57,12 +54,33 @@ function Sparkbars({ seed, max }: { seed: string; max: number }) {
   )
 }
 
-type Props = {
-  word: Word
-  onClose: () => void
+function formatDate(iso?: string): string {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
 }
 
-export function WordDetailSheet({ word, onClose }: Props) {
+export type WordDetail = {
+  id: string
+  term: string
+  lang: LangCode
+  targetLang: LangCode
+  phonetic: string
+  translation: string
+  examples: string[]
+  lookups: number
+  lastSeenAt?: string
+  addedAt?: string
+}
+
+type Props = {
+  word: WordDetail
+  onClose: () => void
+  onRemove?: () => void
+}
+
+export function WordDetailSheet({ word, onClose, onRemove }: Props) {
+  void badgeTier // used by FrequencyBadge internally
+  void LANG_NAMES
   const sparkMax = Math.max(3, Math.ceil(word.lookups / 4))
 
   return (
@@ -89,14 +107,10 @@ export function WordDetailSheet({ word, onClose }: Props) {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: 5,
-              padding: '4px 8px 4px 4px', borderRadius: 100,
-              background: 'var(--accent-tint)',
-            }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 8px 4px 4px', borderRadius: 100, background: 'var(--accent-tint)' }}>
               <LangChip lang={word.lang} size="sm" />
               <span style={{ fontSize: 10, color: 'var(--accent)' }}>→</span>
-              <LangChip lang={word.target} size="sm" />
+              <LangChip lang={word.targetLang} size="sm" />
             </div>
             <FrequencyBadge count={word.lookups} />
           </div>
@@ -125,10 +139,7 @@ export function WordDetailSheet({ word, onClose }: Props) {
             STATS
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 18 }}>
-            <div style={{
-              padding: '10px 12px', borderRadius: 12,
-              background: 'var(--bg-card)', border: '1px solid var(--border)',
-            }}>
+            <div style={{ padding: '10px 12px', borderRadius: 12, background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
               <div style={{ fontSize: 20, fontWeight: 600, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
                 {word.lookups}
               </div>
@@ -136,32 +147,32 @@ export function WordDetailSheet({ word, onClose }: Props) {
                 Lookups
               </div>
             </div>
-            <StatCard label="Last seen" value={word.lastSeen} />
-            <StatCard label="Added" value={word.added} />
+            <StatCard label="Last seen" value={formatDate(word.lastSeenAt)} />
+            <StatCard label="Added" value={formatDate(word.addedAt)} />
           </div>
 
-          <div style={{
-            background: 'var(--bg-card)', border: '1px solid var(--border)',
-            borderRadius: 14, padding: 12, marginBottom: 16,
-          }}>
+          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: 12, marginBottom: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-hint)', letterSpacing: '0.07em' }}>
-                LAST 14 DAYS
-              </span>
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-hint)', letterSpacing: '0.07em' }}>LAST 14 DAYS</span>
               <span style={{ fontSize: 11, color: 'var(--text-hint)' }}>Lookups per day</span>
             </div>
             <Sparkbars seed={word.id} max={sparkMax} />
           </div>
 
-          <button style={{
-            width: '100%', height: 40, borderRadius: 12,
-            background: 'var(--bg-card)', border: '1px solid var(--border)',
-            color: 'var(--text-muted)', fontSize: 12.5, fontWeight: 500,
-            cursor: 'pointer', fontFamily: 'inherit',
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-          }}>
-            <TrashIcon /> Remove from list
-          </button>
+          {onRemove && (
+            <button
+              onClick={onRemove}
+              style={{
+                width: '100%', height: 40, borderRadius: 12,
+                background: 'var(--bg-card)', border: '1px solid var(--border)',
+                color: 'var(--text-muted)', fontSize: 12.5, fontWeight: 500,
+                cursor: 'pointer', fontFamily: 'inherit',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              }}
+            >
+              <TrashIcon /> Remove from list
+            </button>
+          )}
         </div>
       </div>
     </SheetOverlay>

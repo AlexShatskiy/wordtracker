@@ -3,7 +3,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, field_validator
 
 
-Lang = Literal["en", "ru"]
+Lang = Literal["en", "ru", "pl"]
 
 _TERM_MAX_LENGTH = 50
 
@@ -23,6 +23,7 @@ _PROMPT_INJECTION_PATTERNS = [
 class TranslateRequest(BaseModel):
     term: str = Field(min_length=1, max_length=_TERM_MAX_LENGTH)
     lang: Lang = "en"
+    target_lang: Lang | None = None
 
     @field_validator("term", mode="before")
     @classmethod
@@ -43,6 +44,7 @@ class TranslateResponse(BaseModel):
     term: str
     lang: Lang
     translation: str
+    phonetic: str
     examples: list[str]
     source: str
 
@@ -51,9 +53,12 @@ class LLMOutput(BaseModel):
     """Structured output extracted from the LLM."""
 
     translation: str = Field(description="Translation of the term into the target language")
+    phonetic: str = Field(
+        description="IPA phonetic transcription of the source term, e.g. /juːˈbɪk.wɪ.təs/. Empty string if unknown."
+    )
     examples: list[str] = Field(
         description=(
-            "3 example sentences using the term. "
+            "2–3 example sentences using the term. "
             "Each formatted as: '{lang_a} sentence — {lang_b} sentence'"
         )
     )

@@ -5,7 +5,13 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: 'WordTracker',
-  description: 'Bilingual EN ↔ RU dictionary',
+  description: 'Bilingual EN ↔ RU ↔ PL dictionary',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'WordTracker',
+  },
+  formatDetection: { telephone: false },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -17,6 +23,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             __html: `(function(){var t=localStorage.getItem('theme')||(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)})()`,
           }}
         />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <link rel="apple-touch-icon" href="/icon-192.png" />
       </head>
       <body className="h-full bg-[var(--bg-base)]">
         <ThemeProvider>

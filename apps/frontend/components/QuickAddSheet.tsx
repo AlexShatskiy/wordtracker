@@ -1,9 +1,10 @@
 'use client'
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { SheetOverlay } from './SheetOverlay'
 import { LangChip } from './LangChip'
-import { SAMPLE_WORDS, detectLang, findResult, type Word } from '../lib/words'
+import { detectLang } from '../lib/words'
 import { LANG_NAMES, type Pair } from '../lib/pairs'
+import { api, type TranslateResponse, type SavedWord } from '../lib/api'
 
 const CloseIcon = () => (
   <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
@@ -21,24 +22,48 @@ const SparkIcon = () => (
 type Props = {
   pair: Pair
   onClose: () => void
-  onSave: (word: Word) => void
+  onSave: (id: string) => void
 }
 
 export function QuickAddSheet({ pair, onClose, onSave }: Props) {
   const [q, setQ] = useState('')
+  const [result, setResult] = useState<TranslateResponse | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [recents, setRecents] = useState<SavedWord[]>([])
   const ref = useRef<HTMLInputElement>(null)
 
   useEffect(() => { ref.current?.focus() }, [])
 
-  const detected = useMemo(() => detectLang(q), [q])
-  const result = useMemo(() => findResult(q, pair), [q, pair])
-  const recents = SAMPLE_WORDS
-    .filter(w => (w.lang === pair.from && w.target === pair.to) || (w.lang === pair.to && w.target === pair.from))
-    .slice(0, 5)
+  useEffect(() => {
+    api.listWords(pair.from, pair.to)
+      .then(res => setRecents(res.data.slice(0, 5)))
+      .catch(() => {})
+  }, [pair])
 
-  function handleSave() {
+  const detected = q ? detectLang(q) : pair.from
+
+  // Debounced translate
+  useEffect(() => {
+    const trimmed = q.trim()
+    if (!trimmed) { setResult(null); setLoading(false); return }
+    setLoading(true)
+    const timer = setTimeout(async () => {
+      try {
+        const res = await api.translate(trimmed, detected === pair.to ? pair.to : pair.from, detected === pair.to ? pair.from : pair.to)
+        setResult(res)
+      } catch {
+        setResult(null)
+      } finally {
+        setLoading(false)
+      }
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [q, detected, pair])
+
+  async function handleSave() {
     if (!result) return
-    onSave(result)
+    await api.saveWord(result.id)
+    onSave(result.id)
     onClose()
   }
 
@@ -70,19 +95,10 @@ export function QuickAddSheet({ pair, onClose, onSave }: Props) {
           />
           {q && (
             <div style={{ marginTop: 10, display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-              <span style={{
-                display: 'inline-flex', alignItems: 'center', gap: 5,
-                padding: '4px 9px', borderRadius: 100,
-                background: 'var(--accent-tint)', color: 'var(--accent)',
-                fontSize: 10, fontWeight: 600, letterSpacing: '0.06em',
-              }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 9px', borderRadius: 100, background: 'var(--accent-tint)', color: 'var(--accent)', fontSize: 10, fontWeight: 600, letterSpacing: '0.06em' }}>
                 Detected · {LANG_NAMES[detected]}
               </span>
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: 5,
-                padding: '4px 8px 4px 4px', borderRadius: 100,
-                background: 'var(--bg-card)', border: '1px solid var(--border)',
-              }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 8px 4px 4px', borderRadius: 100, background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
                 <LangChip lang={pair.from} size="sm" />
                 <span style={{ fontSize: 10, color: 'var(--text-hint)' }}>⇄</span>
                 <LangChip lang={pair.to} size="sm" />
@@ -94,16 +110,12 @@ export function QuickAddSheet({ pair, onClose, onSave }: Props) {
         {/* Recent chips (when empty) */}
         {!q && recents.length > 0 && (
           <div style={{ padding: '14px 16px 0' }}>
-            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-hint)', letterSpacing: '0.07em', marginBottom: 8 }}>
-              RECENT
-            </div>
+            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-hint)', letterSpacing: '0.07em', marginBottom: 8 }}>RECENT</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {recents.map(w => (
                 <button key={w.id} onClick={() => setQ(w.term)} style={{
-                  background: 'var(--bg-card)', border: '1px solid var(--border)',
-                  borderRadius: 100, padding: '6px 12px',
-                  fontSize: 12, color: 'var(--text-primary)', cursor: 'pointer',
-                  fontFamily: 'inherit',
+                  background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 100, padding: '6px 12px',
+                  fontSize: 12, color: 'var(--text-primary)', cursor: 'pointer', fontFamily: 'inherit',
                 }}>
                   {w.term}
                 </button>
@@ -115,56 +127,42 @@ export function QuickAddSheet({ pair, onClose, onSave }: Props) {
         {/* Preview / spinner */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px' }}>
           {q && result && (
-            <div style={{
-              background: 'var(--bg-card)', border: '1px solid var(--border)',
-              borderRadius: 14, padding: 14,
-            }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-hint)', letterSpacing: '0.07em', marginBottom: 8 }}>
-                PREVIEW
-              </div>
+            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-hint)', letterSpacing: '0.07em', marginBottom: 8 }}>PREVIEW</div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: 20, fontWeight: 500, color: 'var(--text-primary)' }}>{result.term}</span>
                 <span style={{ fontSize: 11.5, fontStyle: 'italic', color: 'var(--text-hint)' }}>{result.phonetic}</span>
               </div>
-              <div style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--accent)', marginTop: 4 }}>
-                {result.translation}
-              </div>
-              <div style={{
-                marginTop: 10, fontSize: 11.5, color: 'var(--text-muted)',
-                borderLeft: '2px solid var(--accent)', paddingLeft: 10, lineHeight: 1.5,
-              }}>
-                {result.examples[0]}
-              </div>
+              <div style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--accent)', marginTop: 4 }}>{result.translation}</div>
+              {result.examples[0] && (
+                <div style={{ marginTop: 10, fontSize: 11.5, color: 'var(--text-muted)', borderLeft: '2px solid var(--accent)', paddingLeft: 10, lineHeight: 1.5 }}>
+                  {result.examples[0]}
+                </div>
+              )}
             </div>
           )}
-          {q && !result && (
+          {q && loading && !result && (
             <div style={{ padding: '22px 12px', textAlign: 'center', color: 'var(--text-hint)' }}>
               <SparkIcon />
               <div style={{ marginTop: 8, fontSize: 12 }}>Translating…</div>
+            </div>
+          )}
+          {q && !loading && !result && (
+            <div style={{ padding: '22px 12px', textAlign: 'center', color: 'var(--text-hint)', fontSize: 12 }}>
+              No result found.
             </div>
           )}
         </div>
 
         {/* Footer */}
         <div style={{ padding: '10px 16px 18px', display: 'flex', gap: 10, borderTop: '1px solid var(--border)' }}>
-          <button onClick={onClose} style={{
-            flex: 1, height: 44, borderRadius: 13, background: 'transparent',
-            border: '1px solid var(--border)', color: 'var(--text-muted)',
-            fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
-          }}>
+          <button onClick={onClose} style={{ flex: 1, height: 44, borderRadius: 13, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>
             Skip
           </button>
           <button
             disabled={!result}
             onClick={handleSave}
-            style={{
-              flex: 2, height: 44, borderRadius: 13,
-              background: 'var(--accent)', color: '#fff',
-              border: 'none', fontSize: 13, fontWeight: 600,
-              cursor: result ? 'pointer' : 'not-allowed',
-              opacity: result ? 1 : 0.4,
-              fontFamily: 'inherit',
-            }}
+            style={{ flex: 2, height: 44, borderRadius: 13, background: 'var(--accent)', color: '#fff', border: 'none', fontSize: 13, fontWeight: 600, cursor: result ? 'pointer' : 'not-allowed', opacity: result ? 1 : 0.4, fontFamily: 'inherit' }}
           >
             Save word
           </button>

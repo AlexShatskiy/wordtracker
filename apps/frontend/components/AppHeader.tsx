@@ -1,11 +1,11 @@
 'use client'
+import { useState, useEffect } from 'react'
 import { usePair } from '../lib/PairContext'
 import { PairSwitcherPill } from './PairSwitcherPill'
 
 type Props = {
   title?: string
   subtitle?: string
-  streak?: number
   onAvatarClick?: () => void
   onPairSwitcherOpen?: () => void
 }
@@ -20,16 +20,20 @@ const FlameIcon = () => (
 export function AppHeader({
   title = 'WordTracker',
   subtitle,
-  streak = 0,
   onAvatarClick,
   onPairSwitcherOpen,
 }: Props) {
   const { pair } = usePair()
+  const [streak, setStreak] = useState(0)
   const initials = subtitle?.split(', ')[1]?.[0] ?? 'A'
+
+  useEffect(() => {
+    const s = parseInt(localStorage.getItem('wt-streak') ?? '0', 10)
+    setStreak(s)
+  }, [])
 
   return (
     <div style={{ padding: '12px 14px 8px', background: 'var(--bg-screen)' }}>
-      {/* Top row */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 10 }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
@@ -71,7 +75,6 @@ export function AppHeader({
         </div>
       </div>
 
-      {/* PairSwitcher pill */}
       {pair && onPairSwitcherOpen && (
         <div style={{ marginTop: 10 }}>
           <PairSwitcherPill pair={pair} onClick={onPairSwitcherOpen} />

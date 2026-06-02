@@ -7,7 +7,7 @@ export class TranslateController {
   constructor(private readonly translateService: TranslateService) {}
 
   @Post()
-  translate(@Body() dto: TranslateDto) {
+  async translate(@Body() dto: TranslateDto) {
     return this.translateService.translate(dto);
   }
 }

@@ -4,13 +4,13 @@ export type Word = {
   id: string
   term: string
   lang: LangCode
-  target: LangCode
+  targetLang: LangCode
   phonetic: string
   translation: string
   examples: string[]
   lookups: number
-  lastSeen: string
-  added: string
+  lastSeenAt: string
+  addedAt: string
 }
 
 export function badgeTier(count: number): 'hard' | 'med' | 'easy' {
@@ -32,8 +32,8 @@ export function findResult(q: string, pair: Pair): Word | null {
   if (!q) return null
   const norm = q.trim().toLowerCase()
   const inPair = (w: Word) =>
-    (w.lang === pair.from && w.target === pair.to) ||
-    (w.lang === pair.to && w.target === pair.from)
+    (w.lang === pair.from && w.targetLang === pair.to) ||
+    (w.lang === pair.to && w.targetLang === pair.from)
   return (
     SAMPLE_WORDS.find(w => inPair(w) && w.term.toLowerCase() === norm) ??
     SAMPLE_WORDS.find(w => inPair(w) && w.term.toLowerCase().startsWith(norm)) ??
@@ -44,7 +44,7 @@ export function findResult(q: string, pair: Pair): Word | null {
 export const SAMPLE_WORDS: Word[] = [
   // EN ↔ RU
   {
-    id: 'w1', term: 'serendipity', lang: 'en', target: 'ru',
+    id: 'w1', term: 'serendipity', lang: 'en', targetLang: 'ru',
     phonetic: '/ˌsɛrənˈdɪpɪti/',
     translation: 'счастливая случайность; удачное стечение обстоятельств',
     examples: [
@@ -52,152 +52,139 @@ export const SAMPLE_WORDS: Word[] = [
       'Their meeting at the airport was a moment of serendipity.',
       'Science often relies on serendipity as much as method.',
     ],
-    lookups: 17, lastSeen: '2 hours ago', added: 'May 02',
+    lookups: 17, lastSeenAt: new Date(Date.now() - 7200000).toISOString(), addedAt: '2026-05-02T00:00:00.000Z',
   },
   {
-    id: 'w2', term: 'endeavor', lang: 'en', target: 'ru',
+    id: 'w2', term: 'endeavor', lang: 'en', targetLang: 'ru',
     phonetic: '/ɪnˈdɛvər/',
     translation: 'стремление, попытка; усердно стараться',
     examples: [
       'She will endeavor to finish the report by Friday.',
       'A worthy endeavor deserves patience.',
-      'Despite his best endeavors, the bridge collapsed.',
     ],
-    lookups: 12, lastSeen: 'Yesterday', added: 'Apr 28',
+    lookups: 12, lastSeenAt: new Date(Date.now() - 86400000).toISOString(), addedAt: '2026-04-28T00:00:00.000Z',
   },
   {
-    id: 'w3', term: 'ubiquitous', lang: 'en', target: 'ru',
+    id: 'w3', term: 'ubiquitous', lang: 'en', targetLang: 'ru',
     phonetic: '/juːˈbɪkwɪtəs/',
     translation: 'вездесущий, повсеместный',
     examples: [
       'Coffee shops have become ubiquitous in modern cities.',
-      'The ubiquitous smartphone reshapes daily habits.',
       'Plastic is ubiquitous — even in the deep ocean.',
     ],
-    lookups: 16, lastSeen: '3 days ago', added: 'Apr 21',
+    lookups: 16, lastSeenAt: new Date(Date.now() - 259200000).toISOString(), addedAt: '2026-04-21T00:00:00.000Z',
   },
   {
-    id: 'w4', term: 'resilient', lang: 'en', target: 'ru',
+    id: 'w4', term: 'resilient', lang: 'en', targetLang: 'ru',
     phonetic: '/rɪˈzɪliənt/',
     translation: 'устойчивый, упругий; жизнестойкий',
     examples: [
       'A resilient economy bounces back quickly.',
       'Children are remarkably resilient after setbacks.',
-      'The fabric is light yet resilient.',
     ],
-    lookups: 8, lastSeen: 'Today', added: 'May 12',
+    lookups: 8, lastSeenAt: new Date().toISOString(), addedAt: '2026-05-12T00:00:00.000Z',
   },
   {
-    id: 'w5', term: 'elated', lang: 'en', target: 'ru',
+    id: 'w5', term: 'elated', lang: 'en', targetLang: 'ru',
     phonetic: '/ɪˈleɪtɪd/',
     translation: 'восторженный, в приподнятом настроении',
     examples: [
       'She was elated by the unexpected news.',
       'An elated crowd gathered in the square.',
     ],
-    lookups: 3, lastSeen: 'Today', added: 'May 22',
+    lookups: 3, lastSeenAt: new Date().toISOString(), addedAt: '2026-05-22T00:00:00.000Z',
   },
   {
-    id: 'w6', term: 'обстоятельство', lang: 'ru', target: 'en',
+    id: 'w6', term: 'обстоятельство', lang: 'ru', targetLang: 'en',
     phonetic: '[ɐpstɐˈjatʲɪlʲstvə]',
     translation: 'circumstance; condition',
     examples: [
       'Под давлением обстоятельств он передумал.',
-      'Это лишь смягчающее обстоятельство.',
       'Обстоятельства сложились удачно.',
     ],
-    lookups: 9, lastSeen: 'Yesterday', added: 'May 05',
+    lookups: 9, lastSeenAt: new Date(Date.now() - 86400000).toISOString(), addedAt: '2026-05-05T00:00:00.000Z',
   },
   {
-    id: 'w7', term: 'вдохновение', lang: 'ru', target: 'en',
+    id: 'w7', term: 'вдохновение', lang: 'ru', targetLang: 'en',
     phonetic: '[vdəxnɐˈvʲenʲɪje]',
     translation: 'inspiration',
     examples: [
       'Художник черпает вдохновение из природы.',
-      'Книга подарила мне вдохновение на месяцы.',
     ],
-    lookups: 2, lastSeen: 'Today', added: 'May 24',
+    lookups: 2, lastSeenAt: new Date().toISOString(), addedAt: '2026-05-24T00:00:00.000Z',
   },
   {
-    id: 'w8', term: 'meticulous', lang: 'en', target: 'ru',
+    id: 'w8', term: 'meticulous', lang: 'en', targetLang: 'ru',
     phonetic: '/məˈtɪkjələs/',
     translation: 'дотошный, скрупулёзный',
     examples: [
       'A meticulous craftsman never rushes.',
-      'Her meticulous notes saved the project.',
     ],
-    lookups: 6, lastSeen: '4 days ago', added: 'Apr 30',
+    lookups: 6, lastSeenAt: new Date(Date.now() - 345600000).toISOString(), addedAt: '2026-04-30T00:00:00.000Z',
   },
   {
-    id: 'w9', term: 'пожалуй', lang: 'ru', target: 'en',
+    id: 'w9', term: 'пожалуй', lang: 'ru', targetLang: 'en',
     phonetic: '[pɐˈʐaɫʊj]',
     translation: "perhaps; I'd say; rather",
     examples: [
       'Пожалуй, я возьму чай.',
-      'Это, пожалуй, лучший фильм года.',
     ],
-    lookups: 1, lastSeen: 'Today', added: 'May 25',
+    lookups: 1, lastSeenAt: new Date().toISOString(), addedAt: '2026-05-25T00:00:00.000Z',
   },
   // EN ↔ PL
   {
-    id: 'w10', term: 'overwhelmed', lang: 'en', target: 'pl',
+    id: 'w10', term: 'overwhelmed', lang: 'en', targetLang: 'pl',
     phonetic: '/ˌəʊvəˈwɛlmd/',
     translation: 'przytłoczony, przygnieciony',
     examples: [
       'I felt overwhelmed by the amount of work.',
-      'She was overwhelmed with gratitude.',
     ],
-    lookups: 11, lastSeen: 'Today', added: 'May 18',
+    lookups: 11, lastSeenAt: new Date().toISOString(), addedAt: '2026-05-18T00:00:00.000Z',
   },
   {
-    id: 'w11', term: 'biblioteka', lang: 'pl', target: 'en',
+    id: 'w11', term: 'biblioteka', lang: 'pl', targetLang: 'en',
     phonetic: '[bʲibʲlʲɔˈtɛka]',
     translation: 'library',
     examples: [
       'Spotkajmy się w bibliotece o trzeciej.',
-      'Ta biblioteka ma świetny dział poezji.',
     ],
-    lookups: 4, lastSeen: 'Today', added: 'May 24',
+    lookups: 4, lastSeenAt: new Date().toISOString(), addedAt: '2026-05-24T00:00:00.000Z',
   },
   {
-    id: 'w12', term: 'wprowadzenie', lang: 'pl', target: 'en',
+    id: 'w12', term: 'wprowadzenie', lang: 'pl', targetLang: 'en',
     phonetic: '[fprɔvaˈd͡ʑɛɲɛ]',
     translation: 'introduction; preface',
     examples: [
       'Wprowadzenie do książki było bardzo długie.',
-      'Profesor napisał krótkie wprowadzenie.',
     ],
-    lookups: 7, lastSeen: 'Yesterday', added: 'May 09',
+    lookups: 7, lastSeenAt: new Date(Date.now() - 86400000).toISOString(), addedAt: '2026-05-09T00:00:00.000Z',
   },
   {
-    id: 'w13', term: 'tantamount', lang: 'en', target: 'pl',
+    id: 'w13', term: 'tantamount', lang: 'en', targetLang: 'pl',
     phonetic: '/ˈtæntəmaʊnt/',
     translation: 'równoznaczny; równoważny',
     examples: [
       'Silence here is tantamount to consent.',
-      'Such a remark is tantamount to an apology.',
     ],
-    lookups: 15, lastSeen: '5 days ago', added: 'Apr 16',
+    lookups: 15, lastSeenAt: new Date(Date.now() - 432000000).toISOString(), addedAt: '2026-04-16T00:00:00.000Z',
   },
   // RU ↔ PL
   {
-    id: 'w14', term: 'спотыкаться', lang: 'ru', target: 'pl',
+    id: 'w14', term: 'спотыкаться', lang: 'ru', targetLang: 'pl',
     phonetic: '[spətɨˈkat͡sːə]',
     translation: 'potykać się',
     examples: [
       'Он постоянно спотыкается о порог.',
-      'Не спотыкайся — здесь темно.',
     ],
-    lookups: 5, lastSeen: '2 days ago', added: 'May 10',
+    lookups: 5, lastSeenAt: new Date(Date.now() - 172800000).toISOString(), addedAt: '2026-05-10T00:00:00.000Z',
   },
   {
-    id: 'w15', term: 'spotkanie', lang: 'pl', target: 'ru',
+    id: 'w15', term: 'spotkanie', lang: 'pl', targetLang: 'ru',
     phonetic: '[spɔtˈkaɲɛ]',
     translation: 'встреча; собрание',
     examples: [
       'Spotkanie zostało przełożone na piątek.',
-      'To było przypadkowe spotkanie.',
     ],
-    lookups: 3, lastSeen: 'Today', added: 'May 23',
+    lookups: 3, lastSeenAt: new Date().toISOString(), addedAt: '2026-05-23T00:00:00.000Z',
   },
 ]

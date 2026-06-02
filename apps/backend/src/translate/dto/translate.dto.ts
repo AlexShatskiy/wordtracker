@@ -51,4 +51,9 @@ export class TranslateDto {
   @IsString()
   @IsIn(SUPPORTED_LANGS)
   lang?: Lang;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(SUPPORTED_LANGS)
+  targetLang?: Lang;
 }
