@@ -1,18 +1,41 @@
-interface Props {
+import { badgeTier } from '../lib/words'
+
+type Props = {
   count: number
 }
 
+const TIER_STYLES = {
+  hard: {
+    background: 'color-mix(in oklch, var(--danger) 14%, transparent)',
+    color: 'var(--danger)',
+    label: 'STUCK',
+  },
+  med: {
+    background: 'color-mix(in oklch, var(--warning) 16%, transparent)',
+    color: 'var(--warning)',
+    label: 'OFTEN',
+  },
+  easy: {
+    background: 'color-mix(in oklch, var(--success) 14%, transparent)',
+    color: 'var(--success)',
+    label: 'LEARNING',
+  },
+}
+
 export function FrequencyBadge({ count }: Props) {
-  const cls =
-    count >= 15
-      ? 'bg-[var(--danger-bg)] text-[var(--danger-tx)] border-[var(--danger-bd)]'
-      : count >= 5
-      ? 'bg-[var(--warn-bg)] text-[var(--warn-tx)] border-[var(--warn-bd)]'
-      : 'bg-[var(--ok-bg)] text-[var(--ok-tx)] border-[var(--ok-bd)]'
+  const tier = badgeTier(count)
+  const { background, color, label } = TIER_STYLES[tier]
 
   return (
-    <span className={`${cls} rounded-full px-2 py-[2px] text-[10px] font-medium border border-solid`}>
-      {count}
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4,
+      padding: '4px 9px', borderRadius: 100,
+      background, color,
+      fontSize: 10, fontWeight: 600, letterSpacing: '0.06em',
+      whiteSpace: 'nowrap', flexShrink: 0,
+    }}>
+      <span style={{ fontVariantNumeric: 'tabular-nums' }}>{count}×</span>
+      <span style={{ opacity: 0.85 }}>{label}</span>
     </span>
   )
 }
