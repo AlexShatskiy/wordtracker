@@ -1,5 +1,11 @@
 'use client'
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from 'react'
 
 type Theme = 'light' | 'dark'
 
@@ -13,20 +19,24 @@ export function useTheme() {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>('light')
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window === 'undefined') return 'light'
+    return (
+      (localStorage.getItem('theme') as Theme | null) ??
+      (window.matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark'
+        : 'light')
+    )
+  })
 
   useEffect(() => {
-    const saved = localStorage.getItem('theme') as Theme | null
-    const initial = saved ?? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-    setTheme(initial)
-    document.documentElement.setAttribute('data-theme', initial)
-  }, [])
+    document.documentElement.setAttribute('data-theme', theme)
+  }, [theme])
 
   const toggle = useCallback(() => {
-    setTheme(prev => {
+    setTheme((prev) => {
       const next = prev === 'light' ? 'dark' : 'light'
       localStorage.setItem('theme', next)
-      document.documentElement.setAttribute('data-theme', next)
       return next
     })
   }, [])

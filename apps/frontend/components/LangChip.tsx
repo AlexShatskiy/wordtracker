@@ -7,10 +7,13 @@ type Props = {
   size?: Size
 }
 
-const SIZES: Record<Size, { width: number; height: number; radius: number; fontSize: number }> = {
-  sm: { width: 26, height: 22, radius: 7,  fontSize: 10.5 },
-  md: { width: 36, height: 36, radius: 11, fontSize: 13   },
-  lg: { width: 48, height: 48, radius: 14, fontSize: 16   },
+const SIZES: Record<
+  Size,
+  { width: number; height: number; radius: number; fontSize: number }
+> = {
+  sm: { width: 26, height: 22, radius: 7, fontSize: 10.5 },
+  md: { width: 36, height: 36, radius: 11, fontSize: 13 },
+  lg: { width: 48, height: 48, radius: 14, fontSize: 16 },
 }
 
 export function LangChip({ lang, size = 'md' }: Props) {

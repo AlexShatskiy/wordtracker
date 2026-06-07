@@ -1,4 +1,5 @@
 import logging
+
 from fastapi import APIRouter, HTTPException
 
 from schemas import TranslateRequest, TranslateResponse
@@ -17,7 +18,7 @@ async def translate_word(request: TranslateRequest) -> TranslateResponse:
         result, source = await translate(request.term, request.lang, resolved_target)
     except RuntimeError as exc:
         logger.error("Translation failed for term=%r lang=%r: %s", request.term, request.lang, exc)
-        raise HTTPException(status_code=503, detail="Translation service unavailable")
+        raise HTTPException(status_code=503, detail="Translation service unavailable") from exc
 
     return TranslateResponse(
         term=request.term,

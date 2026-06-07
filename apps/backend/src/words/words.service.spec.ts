@@ -53,7 +53,13 @@ describe('WordsService', () => {
 
   it('listSaved filters by lang', () => {
     const a = service.recordLookup(WORD_INPUT);
-    const b = service.recordLookup({ ...WORD_INPUT, term: 'стул', lang: 'ru', targetLang: 'en', translation: 'chair' });
+    const b = service.recordLookup({
+      ...WORD_INPUT,
+      term: 'стул',
+      lang: 'ru',
+      targetLang: 'en',
+      translation: 'chair',
+    });
     service.save(a.id);
     service.save(b.id);
     const list = service.listSaved('en');
@@ -63,7 +69,13 @@ describe('WordsService', () => {
 
   it('listSaved filters by targetLang', () => {
     const a = service.recordLookup(WORD_INPUT);
-    const b = service.recordLookup({ ...WORD_INPUT, term: 'stół', lang: 'pl', targetLang: 'en', translation: 'table' });
+    const b = service.recordLookup({
+      ...WORD_INPUT,
+      term: 'stół',
+      lang: 'pl',
+      targetLang: 'en',
+      translation: 'table',
+    });
     service.save(a.id);
     service.save(b.id);
     const list = service.listSaved(undefined, 'ru');

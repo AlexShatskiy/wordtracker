@@ -1,4 +1,5 @@
 import logging
+
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_groq import ChatGroq
@@ -12,10 +13,10 @@ _LANG_NAMES: dict[Lang, str] = {"en": "English", "ru": "Russian", "pl": "Polish"
 
 _PROMPT = ChatPromptTemplate.from_template(
     "You are a bilingual dictionary.\n\n"
-    "Translate the {source_lang} word or phrase \"{term}\" into {target_lang}.\n"
+    'Translate the {source_lang} word or phrase "{term}" into {target_lang}.\n'
     "Provide the IPA phonetic transcription of the source term (empty string if unknown).\n"
     "Then provide 2–3 example sentences that naturally use this word/phrase.\n"
-    "Format each example as: \"{lang_a} sentence — {lang_b} sentence\"\n"
+    'Format each example as: "{lang_a} sentence — {lang_b} sentence"\n'
     "Always put {lang_a} first, regardless of translation direction.\n\n"
     "Return structured output only."
 )

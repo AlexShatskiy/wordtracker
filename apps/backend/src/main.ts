@@ -10,10 +10,12 @@ async function bootstrap() {
     methods: ['GET', 'POST', 'DELETE'],
     allowedHeaders: ['Content-Type'],
   });
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
+  app.useGlobalPipes(
+    new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
+  );
   app.useGlobalInterceptors(new LoggingInterceptor());
   const port = process.env.PORT ?? 3001;
   await app.listen(port);
   new Logger('Bootstrap').log(`Backend running on :${port}`);
 }
-bootstrap();
+void bootstrap();

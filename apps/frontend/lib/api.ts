@@ -42,11 +42,18 @@ async function del(path: string): Promise<void> {
 }
 
 export const api = {
-  translate(term: string, lang: LangCode, targetLang: LangCode): Promise<TranslateResponse> {
+  translate(
+    term: string,
+    lang: LangCode,
+    targetLang: LangCode,
+  ): Promise<TranslateResponse> {
     return post('/translate', { term, lang, targetLang })
   },
 
-  listWords(lang?: LangCode, targetLang?: LangCode): Promise<{ data: SavedWord[] }> {
+  listWords(
+    lang?: LangCode,
+    targetLang?: LangCode,
+  ): Promise<{ data: SavedWord[] }> {
     const params = new URLSearchParams()
     if (lang) params.set('lang', lang)
     if (targetLang) params.set('targetLang', targetLang)

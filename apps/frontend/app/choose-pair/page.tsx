@@ -11,7 +11,10 @@ const SwapIcon = ({ active }: { active: boolean }) => (
     height="14"
     viewBox="0 0 14 14"
     fill="none"
-    style={{ color: active ? 'var(--accent)' : 'var(--text-hint)', flexShrink: 0 }}
+    style={{
+      color: active ? 'var(--accent)' : 'var(--text-hint)',
+      flexShrink: 0,
+    }}
   >
     <path
       d="M2 4.5h10M9 2l3 2.5-3 2.5M12 9.5H2M5 7l-3 2.5 3 2.5"
@@ -25,12 +28,24 @@ const SwapIcon = ({ active }: { active: boolean }) => (
 
 const CheckIcon = () => (
   <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-    <path d="M2 5l2.5 2.5 3.5-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    <path
+      d="M2 5l2.5 2.5 3.5-4"
+      stroke="white"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
   </svg>
 )
 
 const SparkIcon = () => (
-  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style={{ color: 'var(--text-hint)', flexShrink: 0 }}>
+  <svg
+    width="12"
+    height="12"
+    viewBox="0 0 16 16"
+    fill="none"
+    style={{ color: 'var(--text-hint)', flexShrink: 0 }}
+  >
     <path
       d="M8 1l1.8 5H15l-4.2 3 1.6 5L8 11l-4.4 3 1.6-5L1 6h5.2L8 1z"
       stroke="currentColor"
@@ -95,14 +110,21 @@ export default function ChoosePairPage() {
         >
           Which languages do you read in?
         </h1>
-        <p style={{ fontSize: 12.5, color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>
+        <p
+          style={{
+            fontSize: 12.5,
+            color: 'var(--text-muted)',
+            margin: 0,
+            lineHeight: 1.5,
+          }}
+        >
           Pick a pair to start. You can add more from the switcher anytime.
         </p>
       </div>
 
       {/* Pair cards */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-        {pairs.map(p => {
+        {pairs.map((p) => {
           const selected = pick !== null && pairsEqual(pick, p)
           return (
             <button
@@ -114,7 +136,9 @@ export default function ChoosePairPage() {
                 gap: 12,
                 padding: 14,
                 borderRadius: 14,
-                border: selected ? '1.5px solid var(--accent)' : '1px solid var(--border)',
+                border: selected
+                  ? '1.5px solid var(--accent)'
+                  : '1px solid var(--border)',
                 background: selected ? 'var(--accent-tint)' : 'var(--bg-card)',
                 cursor: 'pointer',
                 textAlign: 'left',
@@ -124,8 +148,21 @@ export default function ChoosePairPage() {
               <LangChip lang={p.from} size="md" />
               <SwapIcon active={selected} />
               <LangChip lang={p.to} size="md" />
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>
+              <div
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 2,
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 500,
+                    color: 'var(--text-primary)',
+                  }}
+                >
                   {LANG_NAMES[p.from]} ↔ {LANG_NAMES[p.to]}
                 </span>
                 <span style={{ fontSize: 11.5, color: 'var(--text-hint)' }}>
@@ -166,8 +203,16 @@ export default function ChoosePairPage() {
         }}
       >
         <SparkIcon />
-        <p style={{ fontSize: 11, color: 'var(--text-hint)', margin: 0, lineHeight: 1.5 }}>
-          You can add Polish ↔ Russian or any other combination later — your word lists stay separate per pair.
+        <p
+          style={{
+            fontSize: 11,
+            color: 'var(--text-hint)',
+            margin: 0,
+            lineHeight: 1.5,
+          }}
+        >
+          You can add Polish ↔ Russian or any other combination later — your
+          word lists stay separate per pair.
         </p>
       </div>
 

@@ -35,7 +35,9 @@ export class TranslateService {
     const lang = dto.lang ?? detectLang(dto.term);
     const targetLang = dto.targetLang ?? defaultTarget(lang);
 
-    this.logger.log(`[${getCorrelationId()}] term=${dto.term} lang=${lang}→${targetLang}`);
+    this.logger.log(
+      `[${getCorrelationId()}] term=${dto.term} lang=${lang}→${targetLang}`,
+    );
     const result = await this.client.translate(dto.term, lang, targetLang);
 
     const stored = this.words.recordLookup({

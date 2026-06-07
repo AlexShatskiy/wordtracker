@@ -27,13 +27,22 @@ export function FrequencyBadge({ count }: Props) {
   const { background, color, label } = TIER_STYLES[tier]
 
   return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 4,
-      padding: '4px 9px', borderRadius: 100,
-      background, color,
-      fontSize: 10, fontWeight: 600, letterSpacing: '0.06em',
-      whiteSpace: 'nowrap', flexShrink: 0,
-    }}>
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 4,
+        padding: '4px 9px',
+        borderRadius: 100,
+        background,
+        color,
+        fontSize: 10,
+        fontWeight: 600,
+        letterSpacing: '0.06em',
+        whiteSpace: 'nowrap',
+        flexShrink: 0,
+      }}
+    >
       <span style={{ fontVariantNumeric: 'tabular-nums' }}>{count}×</span>
       <span style={{ opacity: 0.85 }}>{label}</span>
     </span>

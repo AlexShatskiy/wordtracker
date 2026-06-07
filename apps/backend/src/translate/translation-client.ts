@@ -1,4 +1,8 @@
-import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { Lang } from '../lang';
@@ -25,16 +29,26 @@ export class TranslationClient {
   private readonly baseUrl: string;
 
   constructor(private readonly config: ConfigService) {
-    this.baseUrl = this.config.get<string>('TRANSLATION_SERVICE_URL', 'http://localhost:8000');
+    this.baseUrl = this.config.get<string>(
+      'TRANSLATION_SERVICE_URL',
+      'http://localhost:8000',
+    );
   }
 
-  async translate(term: string, lang: Lang, targetLang: Lang): Promise<TranslationResult> {
+  async translate(
+    term: string,
+    lang: Lang,
+    targetLang: Lang,
+  ): Promise<TranslationResult> {
     try {
-      const { data } = await axios.post<PythonResponse>(`${this.baseUrl}/translate`, {
-        term,
-        lang,
-        target_lang: targetLang,
-      });
+      const { data } = await axios.post<PythonResponse>(
+        `${this.baseUrl}/translate`,
+        {
+          term,
+          lang,
+          target_lang: targetLang,
+        },
+      );
       return {
         translation: data.translation,
         phonetic: data.phonetic,

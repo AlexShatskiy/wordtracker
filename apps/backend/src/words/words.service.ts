@@ -15,7 +15,10 @@ export type StoredWord = {
   addedAt: Date;
 };
 
-type WordInput = Omit<StoredWord, 'id' | 'lookups' | 'saved' | 'lastSeenAt' | 'addedAt'>;
+type WordInput = Omit<
+  StoredWord,
+  'id' | 'lookups' | 'saved' | 'lastSeenAt' | 'addedAt'
+>;
 
 @Injectable()
 export class WordsService {
@@ -23,10 +26,6 @@ export class WordsService {
 
   private wordId(term: string, lang: Lang, targetLang: Lang): string {
     return `${term.toLowerCase()}:${lang}:${targetLang}`;
-  }
-
-  findInDB(_term: string, _lang: string): null {
-    return null;
   }
 
   recordLookup(word: WordInput): StoredWord {

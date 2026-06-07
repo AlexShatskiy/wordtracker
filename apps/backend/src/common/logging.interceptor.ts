@@ -1,4 +1,10 @@
-import { CallHandler, ExecutionContext, Injectable, Logger, NestInterceptor } from '@nestjs/common';
+import {
+  CallHandler,
+  ExecutionContext,
+  Injectable,
+  Logger,
+  NestInterceptor,
+} from '@nestjs/common';
 import { Observable, tap } from 'rxjs';
 import { Request } from 'express';
 import { getCorrelationId } from './correlation.store';
@@ -14,7 +20,9 @@ export class LoggingInterceptor implements NestInterceptor {
 
     return next.handle().pipe(
       tap(() => {
-        this.logger.log(`[${getCorrelationId()}] ${method} ${url} — ${Date.now() - start}ms`);
+        this.logger.log(
+          `[${getCorrelationId()}] ${method} ${url} — ${Date.now() - start}ms`,
+        );
       }),
     );
   }

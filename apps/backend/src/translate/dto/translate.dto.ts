@@ -1,5 +1,14 @@
 import { Transform } from 'class-transformer';
-import { IsIn, IsOptional, IsString, Matches, MaxLength, MinLength, registerDecorator, ValidationOptions, ValidationArguments } from 'class-validator';
+import {
+  IsIn,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+  MinLength,
+  registerDecorator,
+  ValidationOptions,
+} from 'class-validator';
 import { SUPPORTED_LANGS } from '../../lang';
 import type { Lang } from '../../lang';
 
@@ -35,7 +44,9 @@ function IsNotPromptInjection(options?: ValidationOptions) {
 }
 
 export class TranslateDto {
-  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @IsString()
   @MinLength(1)
   @MaxLength(TERM_MAX_LENGTH)

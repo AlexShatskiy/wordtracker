@@ -1,6 +1,7 @@
 import pytest
 from pydantic import ValidationError
-from schemas import TranslateRequest, LLMOutput
+
+from schemas import LLMOutput, TranslateRequest
 
 
 def test_valid_request():

@@ -14,7 +14,9 @@ describe('TranslateService — language detection', () => {
   let service: TranslateService;
 
   beforeEach(() => {
-    const config = { get: () => 'http://localhost:8000' } as unknown as ConfigService;
+    const config = {
+      get: () => 'http://localhost:8000',
+    } as unknown as ConfigService;
     const client = new TranslationClient(config);
     jest.spyOn(client, 'translate').mockResolvedValue(MOCK_RESULT);
     service = new TranslateService(new WordsService(), client);
