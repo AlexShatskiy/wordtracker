@@ -15,7 +15,7 @@ export class WordsService {
 
   async recordLookup(translationId: string, userId: string): Promise<Word> {
     const id = this.wordId(userId, translationId);
-    return this.prisma.word.upsert({
+    return await this.prisma.word.upsert({
       where: { id },
       create: { id, userId, translationId },
       update: { lookups: { increment: 1 }, lastSeenAt: new Date() },
@@ -35,7 +35,7 @@ export class WordsService {
     lang?: Lang,
     targetLang?: Lang,
   ): Promise<WordWithTranslation[]> {
-    return this.prisma.word.findMany({
+    return await this.prisma.word.findMany({
       where: {
         userId,
         saved: true,
@@ -57,7 +57,7 @@ export class WordsService {
     id: string,
     userId: string,
   ): Promise<WordWithTranslation | null> {
-    return this.prisma.word.findFirst({
+    return await this.prisma.word.findFirst({
       where: { id, userId },
       include: { translation: true },
     });
