@@ -1,4 +1,10 @@
 :root {
+  --google-primary: #202124;
+  --google-secondary: #5f6368;
+  --google-border: #dadce0;
+  --google-bg: #ffffff;
+  --avatar-blue: #1a73e8;
+  --avatar-green: #34a853;
   --bg-base: #f0ede8;
   --bg-screen: #f7f4f0;
   --bg-card: #fdfcfa;

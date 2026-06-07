@@ -1,4 +1,4 @@
-import { IsIn, IsOptional, IsString } from 'class-validator';
+import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
 import { SUPPORTED_LANGS } from '../../lang';
 import type { Lang } from '../../lang';
 
@@ -16,5 +16,6 @@ export class ListWordsDto {
 
 export class SaveWordDto {
   @IsString()
+  @MaxLength(200)
   id: string;
 }

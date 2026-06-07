@@ -1,0 +1,49 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  words     Word[]
+}
+
+// Shared translation cache — one record per unique (term, lang, targetLang).
+// Never owned by a user. LLM is called once; all users reuse this record.
+model Translation {
+  id          String   @id // "term:lang:targetLang"
+  term        String
+  lang        String
+  targetLang  String
+  translation String
+  phonetic    String
+  examples    String[]
+  source      String   // which LLM produced this ("gemini" | "groq")
+  createdAt   DateTime @default(now())
+  words       Word[]
+
+  @@index([term, lang, targetLang])
+}
+
+// Per-user word tracking — one record per (user, translation).
+// Tracks whether the user saved the word and how many times they looked it up.
+model Word {
+  id            String      @id // "userId:term:lang:targetLang"
+  userId        String
+  translationId String
+  saved         Boolean     @default(false)
+  lookups       Int         @default(1)
+  lastSeenAt    DateTime    @default(now())
+  addedAt       DateTime    @default(now())
+  user          User        @relation(fields: [userId], references: [id])
+  translation   Translation @relation(fields: [translationId], references: [id])
+
+  @@index([userId, saved])
+}

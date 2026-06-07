@@ -1,0 +1,55 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: wordtracker
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d wordtracker"]
+      interval: 5s
+      retries: 5
+
+  translation:
+    build: ./services/translation
+    ports:
+      - "8000:8000"
+    env_file: ./services/translation/.env
+    environment:
+      PORT: "8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      retries: 3
+
+  backend:
+    build: ./apps/backend
+    ports:
+      - "3001:3001"
+    env_file: ./apps/backend/.env
+    environment:
+      DATABASE_URL: postgresql://user:password@db:5432/wordtracker
+      TRANSLATION_SERVICE_URL: http://translation:8000
+      FRONTEND_URL: http://localhost:3000
+    depends_on:
+      db:
+        condition: service_healthy
+      translation:
+        condition: service_healthy
+
+  frontend:
+    build: ./apps/frontend
+    ports:
+      - "3000:3000"
+    env_file: ./apps/frontend/.env.local
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:

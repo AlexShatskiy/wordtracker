@@ -2,6 +2,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+from config import settings  # noqa: E402
+
+settings.validate_keys()
+
 from fastapi import FastAPI  # noqa: E402
 
 from router import router  # noqa: E402

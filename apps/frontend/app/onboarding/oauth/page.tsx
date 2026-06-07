@@ -1,36 +1,18 @@
 'use client'
 import { useRouter } from 'next/navigation'
 
-const ACCOUNTS = [
-  {
-    name: 'Anna Volkova',
-    email: 'anna.volkova@gmail.com',
-    initials: 'AV',
-    bg: '#1a73e8',
-  },
-  {
-    name: 'Dmitry Petrov',
-    email: 'd.petrov@workmail.io',
-    initials: 'DP',
-    bg: '#34a853',
-  },
-]
+const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
 export default function OAuthPage() {
   const router = useRouter()
-
-  function selectAccount(email: string) {
-    localStorage.setItem('wt-account', email)
-    router.push('/onboarding/welcome')
-  }
 
   return (
     <div
       style={{
         minHeight: '100dvh',
-        background: '#ffffff',
+        background: 'var(--google-bg)',
         fontFamily: '"Google Sans", Roboto, system-ui, sans-serif',
-        color: '#202124',
+        color: 'var(--google-primary)',
         overflowY: 'auto',
       }}
     >
@@ -50,95 +32,70 @@ export default function OAuthPage() {
               width="22"
               height="22"
               rx="3"
-              stroke="#1a73e8"
+              stroke="var(--avatar-blue)"
               strokeWidth="2"
               fill="none"
             />
             <path
               d="M9 17h12M9 21h12M9 25h8"
-              stroke="#1a73e8"
+              stroke="var(--avatar-blue)"
               strokeWidth="2"
               strokeLinecap="round"
             />
-            <circle cx="30" cy="10" r="6" fill="#1a73e8" />
+            <circle cx="30" cy="10" r="6" fill="var(--avatar-blue)" />
           </svg>
           <h1 style={{ fontSize: 22, fontWeight: 400, margin: '0 0 8px' }}>
             Sign in to WordTracker
           </h1>
-          <p style={{ fontSize: 14, color: '#5f6368', margin: 0 }}>
-            Choose an account to continue
+          <p
+            style={{
+              fontSize: 14,
+              color: 'var(--google-secondary)',
+              margin: 0,
+            }}
+          >
+            Use your Google account to continue
           </p>
         </div>
 
-        <div
+        <a
+          href={`${API}/auth/google`}
           style={{
-            border: '1px solid #dadce0',
-            borderRadius: 12,
-            overflow: 'hidden',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 12,
+            width: '100%',
+            padding: '12px 20px',
+            border: '1px solid var(--google-border)',
+            borderRadius: 8,
+            background: 'var(--google-bg)',
+            color: 'var(--google-primary)',
+            fontSize: 14,
+            fontWeight: 500,
+            fontFamily: 'inherit',
+            textDecoration: 'none',
+            cursor: 'pointer',
+            boxSizing: 'border-box',
           }}
         >
-          {ACCOUNTS.map((acc, i) => (
-            <button
-              key={acc.email}
-              onClick={() => selectAccount(acc.email)}
-              style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 16,
-                padding: '16px 20px',
-                background: 'none',
-                border: 'none',
-                borderTop: i > 0 ? '1px solid #dadce0' : 'none',
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-                textAlign: 'left',
-              }}
-            >
-              <div
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: '50%',
-                  background: acc.bg,
-                  color: '#fff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 15,
-                  fontWeight: 500,
-                  flexShrink: 0,
-                }}
-              >
-                {acc.initials}
-              </div>
-              <div>
-                <div
-                  style={{ fontSize: 14, fontWeight: 500, color: '#202124' }}
-                >
-                  {acc.name}
-                </div>
-                <div style={{ fontSize: 12, color: '#5f6368', marginTop: 2 }}>
-                  {acc.email}
-                </div>
-              </div>
-            </button>
-          ))}
-        </div>
+          <GoogleLogo />
+          Sign in with Google
+        </a>
 
         <button
           onClick={() => router.back()}
           style={{
             display: 'block',
             width: '100%',
-            marginTop: 16,
+            marginTop: 12,
             padding: '10px',
             background: 'none',
-            border: '1px solid #dadce0',
+            border: '1px solid var(--google-border)',
             borderRadius: 8,
             cursor: 'pointer',
             fontSize: 14,
-            color: '#5f6368',
+            color: 'var(--google-secondary)',
             fontFamily: 'inherit',
           }}
         >
@@ -146,5 +103,28 @@ export default function OAuthPage() {
         </button>
       </div>
     </div>
+  )
+}
+
+function GoogleLogo() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18">
+      <path
+        fill="#4285F4"
+        d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"
+      />
+      <path
+        fill="#34A853"
+        d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"
+      />
+      <path
+        fill="#EA4335"
+        d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"
+      />
+    </svg>
   )
 }

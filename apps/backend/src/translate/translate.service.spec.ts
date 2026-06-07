@@ -1,58 +1,115 @@
 import { TranslateService } from './translate.service';
 import { WordsService } from '../words/words.service';
 import { TranslationClient } from './translation-client';
+import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 
-const MOCK_RESULT = {
-  translation: 'test translation',
-  phonetic: '/test/',
-  examples: ['example sentence'],
-  source: 'mock',
+const USER_ID = 'user-123';
+const MOCK_LLM_RESULT = {
+  translation: 'стол',
+  phonetic: '/ˈteɪbəl/',
+  examples: ['The table is wooden.'],
+  source: 'gemini',
 };
 
-describe('TranslateService — language detection', () => {
-  let service: TranslateService;
+function makeMockWord(
+  term: string,
+  lang: string,
+  targetLang: string,
+  lookups = 1,
+) {
+  const translationId = `${term}:${lang}:${targetLang}`;
+  return {
+    id: `${USER_ID}:${translationId}`,
+    userId: USER_ID,
+    translationId,
+    lookups,
+    saved: false,
+    lastSeenAt: new Date(),
+    addedAt: new Date(),
+  };
+}
+
+function makePrismaMock(cachedTranslation: unknown = null) {
+  return {
+    translation: {
+      findUnique: jest.fn().mockResolvedValue(cachedTranslation),
+      create: jest.fn().mockImplementation(({ data }) => Promise.resolve(data)),
+    },
+  } as unknown as PrismaService;
+}
+
+function makeWordsMock() {
+  return {
+    recordLookup: jest
+      .fn()
+      .mockImplementation((translationId: string) =>
+        Promise.resolve(
+          makeMockWord(
+            ...(translationId.split(':') as [string, string, string]),
+          ),
+        ),
+      ),
+  } as unknown as WordsService;
+}
+
+describe('TranslateService', () => {
+  let client: TranslationClient;
 
   beforeEach(() => {
-    const config = {
+    const cfg = {
       get: () => 'http://localhost:8000',
     } as unknown as ConfigService;
-    const client = new TranslationClient(config);
-    jest.spyOn(client, 'translate').mockResolvedValue(MOCK_RESULT);
-    service = new TranslateService(new WordsService(), client);
+    client = new TranslationClient(cfg);
+    jest.spyOn(client, 'translate').mockResolvedValue(MOCK_LLM_RESULT);
   });
 
-  it('detects English for latin term', async () => {
-    const result = await service.translate({ term: 'table' });
+  it('calls LLM on cache miss', async () => {
+    const prisma = makePrismaMock(null);
+    const svc = new TranslateService(prisma, makeWordsMock(), client);
+    const result = await svc.translate({ term: 'table' }, USER_ID);
+    expect(client.translate).toHaveBeenCalledTimes(1);
+    expect(result.source).toBe('gemini');
+  });
+
+  it('skips LLM on cache hit', async () => {
+    const cached = {
+      id: 'table:en:ru',
+      term: 'table',
+      lang: 'en',
+      targetLang: 'ru',
+      translation: 'стол',
+      phonetic: '/ˈteɪbəl/',
+      examples: [],
+      source: 'gemini',
+    };
+    const prisma = makePrismaMock(cached);
+    const svc = new TranslateService(prisma, makeWordsMock(), client);
+    const result = await svc.translate({ term: 'table' }, USER_ID);
+    expect(client.translate).not.toHaveBeenCalled();
+    expect(result.source).toBe('cache');
+    expect(result.translation).toBe('стол');
+  });
+
+  it('detects language automatically', async () => {
+    const prisma = makePrismaMock(null);
+    const svc = new TranslateService(prisma, makeWordsMock(), client);
+    const en = await svc.translate({ term: 'table' }, USER_ID);
+    expect(en.lang).toBe('en');
+    const ru = await svc.translate({ term: 'стол' }, USER_ID);
+    expect(ru.lang).toBe('ru');
+    const pl = await svc.translate({ term: 'żółw' }, USER_ID);
+    expect(pl.lang).toBe('pl');
+  });
+
+  it('respects explicit lang and targetLang overrides', async () => {
+    const prisma = makePrismaMock(null);
+    const svc = new TranslateService(prisma, makeWordsMock(), client);
+    const result = await svc.translate(
+      { term: 'table', lang: 'en', targetLang: 'pl' },
+      USER_ID,
+    );
     expect(result.lang).toBe('en');
-    expect(result.targetLang).toBe('ru');
-  });
-
-  it('detects Russian for Cyrillic term', async () => {
-    const result = await service.translate({ term: 'стол' });
-    expect(result.lang).toBe('ru');
-    expect(result.targetLang).toBe('en');
-  });
-
-  it('detects Polish for term with Polish diacritics', async () => {
-    const result = await service.translate({ term: 'żółw' });
-    expect(result.lang).toBe('pl');
-    expect(result.targetLang).toBe('en');
-  });
-
-  it('respects explicit lang override', async () => {
-    const result = await service.translate({ term: 'table', lang: 'pl' });
-    expect(result.lang).toBe('pl');
-  });
-
-  it('respects explicit targetLang override', async () => {
-    const result = await service.translate({ term: 'table', targetLang: 'pl' });
     expect(result.targetLang).toBe('pl');
-  });
-
-  it('increments lookups on repeated translate', async () => {
-    await service.translate({ term: 'table' });
-    const second = await service.translate({ term: 'table' });
-    expect(second.lookups).toBe(2);
   });
 });

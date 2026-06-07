@@ -18,30 +18,61 @@ export type SavedWord = TranslateResponse & {
   addedAt: string
 }
 
+export type MeResponse = {
+  id: string
+  email: string
+}
+
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
+
+function onUnauthorized() {
+  if (typeof window !== 'undefined') {
+    window.location.href = '/onboarding/oauth'
+  }
+}
 
 async function post<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
+  if (res.status === 401) {
+    onUnauthorized()
+    throw new Error('Unauthorized')
+  }
   if (!res.ok) throw new Error(`POST ${path} failed: ${res.status}`)
   return res.json() as Promise<T>
 }
 
 async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`)
+  const res = await fetch(`${BASE}${path}`, { credentials: 'include' })
+  if (res.status === 401) {
+    onUnauthorized()
+    throw new Error('Unauthorized')
+  }
   if (!res.ok) throw new Error(`GET ${path} failed: ${res.status}`)
   return res.json() as Promise<T>
 }
 
 async function del(path: string): Promise<void> {
-  const res = await fetch(`${BASE}${path}`, { method: 'DELETE' })
+  const res = await fetch(`${BASE}${path}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  })
+  if (res.status === 401) {
+    onUnauthorized()
+    throw new Error('Unauthorized')
+  }
   if (!res.ok) throw new Error(`DELETE ${path} failed: ${res.status}`)
 }
 
 export const api = {
+  me(): Promise<MeResponse> {
+    return get('/auth/me')
+  },
+
   translate(
     term: string,
     lang: LangCode,

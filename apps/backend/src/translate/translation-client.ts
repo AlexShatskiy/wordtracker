@@ -27,12 +27,14 @@ type PythonResponse = {
 export class TranslationClient {
   private readonly logger = new Logger(TranslationClient.name);
   private readonly baseUrl: string;
+  private readonly secret: string;
 
   constructor(private readonly config: ConfigService) {
     this.baseUrl = this.config.get<string>(
       'TRANSLATION_SERVICE_URL',
       'http://localhost:8000',
     );
+    this.secret = this.config.get<string>('INTERNAL_API_SECRET', '');
   }
 
   async translate(
@@ -40,6 +42,9 @@ export class TranslationClient {
     lang: Lang,
     targetLang: Lang,
   ): Promise<TranslationResult> {
+    const headers: Record<string, string> = {};
+    if (this.secret) headers['X-Internal-Secret'] = this.secret;
+
     try {
       const { data } = await axios.post<PythonResponse>(
         `${this.baseUrl}/translate`,
@@ -48,6 +53,7 @@ export class TranslationClient {
           lang,
           target_lang: targetLang,
         },
+        { headers },
       );
       return {
         translation: data.translation,

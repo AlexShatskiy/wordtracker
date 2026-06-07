@@ -1,6 +1,7 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { api } from '../../../lib/api'
 
 function markOnboardingDone() {
   localStorage.setItem('wt-onboarding-done', '1')
@@ -13,14 +14,6 @@ function getInitials(name: string): string {
     .join('')
     .toUpperCase()
     .slice(0, 2)
-}
-
-function getNameFromEmail(email: string): string {
-  const known: Record<string, string> = {
-    'anna.volkova@gmail.com': 'Anna Volkova',
-    'd.petrov@workmail.io': 'Dmitry Petrov',
-  }
-  return known[email] ?? email.split('@')[0]
 }
 
 const HOW_IT_WORKS = [
@@ -40,17 +33,21 @@ const HOW_IT_WORKS = [
 
 export default function WelcomePage() {
   const router = useRouter()
-  const [email] = useState(() =>
-    typeof window === 'undefined'
-      ? ''
-      : (localStorage.getItem('wt-account') ?? ''),
-  )
-  const [name] = useState(() => getNameFromEmail(email))
+  const [email, setEmail] = useState('')
+
+  useEffect(() => {
+    api
+      .me()
+      .then((user) => setEmail(user.email))
+      .catch(() => {})
+  }, [])
 
   function start() {
     markOnboardingDone()
     router.push('/choose-pair')
   }
+
+  const name = email.split('@')[0]
 
   return (
     <div
@@ -72,7 +69,7 @@ export default function WelcomePage() {
             marginBottom: 4,
           }}
         >
-          Welcome{name ? `, ${name.split(' ')[0]}` : ''}!
+          Welcome{name ? `, ${name}` : ''}!
         </div>
         <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
           You&apos;re all set to start building your vocabulary.

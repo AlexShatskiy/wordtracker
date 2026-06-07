@@ -1,12 +1,23 @@
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Security
+from fastapi.security.api_key import APIKeyHeader
 
+from config import settings
 from schemas import TranslateRequest, TranslateResponse
 from translation_service import translate
 
 logger = logging.getLogger(__name__)
-router = APIRouter()
+
+_secret_header = APIKeyHeader(name="X-Internal-Secret", auto_error=False)
+
+
+def _require_internal(secret: str | None = Security(_secret_header)) -> None:
+    if settings.internal_api_secret and secret != settings.internal_api_secret:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+
+router = APIRouter(dependencies=[Depends(_require_internal)])
 
 
 @router.post("/translate", response_model=TranslateResponse)

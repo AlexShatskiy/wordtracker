@@ -1,73 +1,65 @@
 import { Injectable } from '@nestjs/common';
+import { Translation, Word } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
 import { Lang } from '../lang';
 
-export type StoredWord = {
-  id: string;
-  term: string;
-  lang: Lang;
-  targetLang: Lang;
-  translation: string;
-  phonetic: string;
-  examples: string[];
-  lookups: number;
-  saved: boolean;
-  lastSeenAt: Date;
-  addedAt: Date;
-};
-
-type WordInput = Omit<
-  StoredWord,
-  'id' | 'lookups' | 'saved' | 'lastSeenAt' | 'addedAt'
->;
+export type WordWithTranslation = Word & { translation: Translation };
 
 @Injectable()
 export class WordsService {
-  private readonly store = new Map<string, StoredWord>();
+  constructor(private readonly prisma: PrismaService) {}
 
-  private wordId(term: string, lang: Lang, targetLang: Lang): string {
-    return `${term.toLowerCase()}:${lang}:${targetLang}`;
+  private wordId(userId: string, translationId: string): string {
+    return `${userId}:${translationId}`;
   }
 
-  recordLookup(word: WordInput): StoredWord {
-    const id = this.wordId(word.term, word.lang, word.targetLang);
-    const existing = this.store.get(id);
-    if (existing) {
-      existing.lookups += 1;
-      existing.lastSeenAt = new Date();
-      return existing;
-    }
-    const entry: StoredWord = {
-      ...word,
-      id,
-      lookups: 1,
-      saved: false,
-      lastSeenAt: new Date(),
-      addedAt: new Date(),
-    };
-    this.store.set(id, entry);
-    return entry;
-  }
-
-  save(id: string): void {
-    const word = this.store.get(id);
-    if (word) word.saved = true;
-  }
-
-  unsave(id: string): void {
-    const word = this.store.get(id);
-    if (word) word.saved = false;
-  }
-
-  listSaved(lang?: Lang, targetLang?: Lang): StoredWord[] {
-    return [...this.store.values()].filter((w) => {
-      if (!w.saved) return false;
-      if (lang && w.lang !== lang) return false;
-      if (targetLang && w.targetLang !== targetLang) return false;
-      return true;
+  async recordLookup(translationId: string, userId: string): Promise<Word> {
+    const id = this.wordId(userId, translationId);
+    return this.prisma.word.upsert({
+      where: { id },
+      create: { id, userId, translationId },
+      update: { lookups: { increment: 1 }, lastSeenAt: new Date() },
     });
   }
 
-  getById(id: string): StoredWord | null {
-    return this.store.get(id) ?? null;
+  async save(id: string): Promise<void> {
+    await this.prisma.word.update({ where: { id }, data: { saved: true } });
+  }
+
+  async unsave(id: string): Promise<void> {
+    await this.prisma.word.update({ where: { id }, data: { saved: false } });
+  }
+
+  async listSaved(
+    userId: string,
+    lang?: Lang,
+    targetLang?: Lang,
+  ): Promise<WordWithTranslation[]> {
+    return this.prisma.word.findMany({
+      where: {
+        userId,
+        saved: true,
+        ...(lang || targetLang
+          ? {
+              translation: {
+                ...(lang ? { lang } : {}),
+                ...(targetLang ? { targetLang } : {}),
+              },
+            }
+          : {}),
+      },
+      include: { translation: true },
+      orderBy: { lastSeenAt: 'desc' },
+    });
+  }
+
+  async getById(
+    id: string,
+    userId: string,
+  ): Promise<WordWithTranslation | null> {
+    return this.prisma.word.findFirst({
+      where: { id, userId },
+      include: { translation: true },
+    });
   }
 }

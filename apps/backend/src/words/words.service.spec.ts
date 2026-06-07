@@ -1,89 +1,104 @@
 import { WordsService } from './words.service';
+import { PrismaService } from '../prisma/prisma.service';
 
-const WORD_INPUT = {
+const USER_ID = 'user-123';
+const TRANSLATION_ID = 'table:en:ru';
+const WORD_ID = `${USER_ID}:${TRANSLATION_ID}`;
+
+const MOCK_TRANSLATION = {
+  id: TRANSLATION_ID,
   term: 'table',
-  lang: 'en' as const,
-  targetLang: 'ru' as const,
+  lang: 'en',
+  targetLang: 'ru',
   translation: 'стол',
   phonetic: '/ˈteɪbəl/',
   examples: ['The table is wooden.'],
+  source: 'gemini',
+  createdAt: new Date(),
 };
+
+function makeWord(overrides = {}) {
+  return {
+    id: WORD_ID,
+    userId: USER_ID,
+    translationId: TRANSLATION_ID,
+    lookups: 1,
+    saved: false,
+    lastSeenAt: new Date(),
+    addedAt: new Date(),
+    translation: MOCK_TRANSLATION,
+    ...overrides,
+  };
+}
+
+function makePrismaMock() {
+  return {
+    word: {
+      upsert: jest.fn(),
+      update: jest.fn(),
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+    },
+  } as unknown as PrismaService;
+}
 
 describe('WordsService', () => {
   let service: WordsService;
+  let prisma: ReturnType<typeof makePrismaMock>;
 
   beforeEach(() => {
-    service = new WordsService();
+    prisma = makePrismaMock();
+    service = new WordsService(prisma);
   });
 
-  it('recordLookup creates entry with lookups=1', () => {
-    const result = service.recordLookup(WORD_INPUT);
-    expect(result.lookups).toBe(1);
-    expect(result.saved).toBe(false);
-    expect(result.id).toBe('table:en:ru');
+  it('recordLookup upserts word with correct ids', async () => {
+    const word = makeWord();
+    (prisma.word.upsert as jest.Mock).mockResolvedValue(word);
+    const result = await service.recordLookup(TRANSLATION_ID, USER_ID);
+    expect(prisma.word.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: WORD_ID },
+        create: expect.objectContaining({
+          userId: USER_ID,
+          translationId: TRANSLATION_ID,
+        }),
+      }),
+    );
+    expect(result.id).toBe(WORD_ID);
   });
 
-  it('recordLookup increments lookups on repeated calls', () => {
-    service.recordLookup(WORD_INPUT);
-    const result = service.recordLookup(WORD_INPUT);
-    expect(result.lookups).toBe(2);
-  });
-
-  it('save marks word as saved', () => {
-    const entry = service.recordLookup(WORD_INPUT);
-    service.save(entry.id);
-    expect(service.getById(entry.id)?.saved).toBe(true);
-  });
-
-  it('unsave marks word as not saved', () => {
-    const entry = service.recordLookup(WORD_INPUT);
-    service.save(entry.id);
-    service.unsave(entry.id);
-    expect(service.getById(entry.id)?.saved).toBe(false);
-  });
-
-  it('listSaved returns only saved words', () => {
-    const a = service.recordLookup(WORD_INPUT);
-    service.recordLookup({ ...WORD_INPUT, term: 'chair', translation: 'стул' });
-    service.save(a.id);
-    const list = service.listSaved();
-    expect(list).toHaveLength(1);
-    expect(list[0].term).toBe('table');
-  });
-
-  it('listSaved filters by lang', () => {
-    const a = service.recordLookup(WORD_INPUT);
-    const b = service.recordLookup({
-      ...WORD_INPUT,
-      term: 'стул',
-      lang: 'ru',
-      targetLang: 'en',
-      translation: 'chair',
+  it('save updates saved=true', async () => {
+    (prisma.word.update as jest.Mock).mockResolvedValue({});
+    await service.save(WORD_ID);
+    expect(prisma.word.update).toHaveBeenCalledWith({
+      where: { id: WORD_ID },
+      data: { saved: true },
     });
-    service.save(a.id);
-    service.save(b.id);
-    const list = service.listSaved('en');
-    expect(list).toHaveLength(1);
-    expect(list[0].term).toBe('table');
   });
 
-  it('listSaved filters by targetLang', () => {
-    const a = service.recordLookup(WORD_INPUT);
-    const b = service.recordLookup({
-      ...WORD_INPUT,
-      term: 'stół',
-      lang: 'pl',
-      targetLang: 'en',
-      translation: 'table',
+  it('unsave updates saved=false', async () => {
+    (prisma.word.update as jest.Mock).mockResolvedValue({});
+    await service.unsave(WORD_ID);
+    expect(prisma.word.update).toHaveBeenCalledWith({
+      where: { id: WORD_ID },
+      data: { saved: false },
     });
-    service.save(a.id);
-    service.save(b.id);
-    const list = service.listSaved(undefined, 'ru');
-    expect(list).toHaveLength(1);
-    expect(list[0].targetLang).toBe('ru');
   });
 
-  it('getById returns null for unknown id', () => {
-    expect(service.getById('nonexistent:en:ru')).toBeNull();
+  it('listSaved includes userId filter', async () => {
+    const word = makeWord({ saved: true });
+    (prisma.word.findMany as jest.Mock).mockResolvedValue([word]);
+    const list = await service.listSaved(USER_ID);
+    expect(prisma.word.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ userId: USER_ID }),
+      }),
+    );
+    expect(list[0].translation.term).toBe('table');
+  });
+
+  it('getById returns null for unknown word', async () => {
+    (prisma.word.findFirst as jest.Mock).mockResolvedValue(null);
+    expect(await service.getById('unknown', USER_ID)).toBeNull();
   });
 });
