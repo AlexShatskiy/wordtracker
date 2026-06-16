@@ -10,6 +10,10 @@ export class AuthService {
     private readonly jwt: JwtService,
   ) {}
 
+  findUser(id: string) {
+    return this.prisma.user.findUnique({ where: { id } });
+  }
+
   async signIn(profile: GoogleProfile): Promise<string> {
     await this.prisma.user.upsert({
       where: { id: profile.id },

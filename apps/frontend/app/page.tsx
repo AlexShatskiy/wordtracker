@@ -12,7 +12,13 @@ import { WordDetailSheet, type WordDetail } from '../components/WordDetailSheet'
 import { usePair } from '../lib/PairContext'
 import { LANG_NAMES, type Pair, type LangCode } from '../lib/pairs'
 import { detectLang } from '../lib/words'
-import { api, type TranslateResponse, type SavedWord } from '../lib/api'
+import { api, type TranslateResponse, type SavedWord, type MeResponse } from '../lib/api'
+
+function greeting(name: string | null): string {
+  const hour = new Date().getHours()
+  const time = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+  return name ? `${time}, ${name.split(' ')[0]}` : time
+}
 
 const BookmarkIcon = ({ filled }: { filled: boolean }) => (
   <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
@@ -162,6 +168,7 @@ export default function TranslatePage() {
   const inputRef = useRef<HTMLInputElement>(null)
 
   const [mounted, setMounted] = useState(false)
+  const [me, setMe] = useState<MeResponse | null>(null)
   const [query, setQuery] = useState('')
   const [result, setResult] = useState<TranslateResponse | null>(null)
   const [loading, setLoading] = useState(false)
@@ -185,6 +192,13 @@ export default function TranslatePage() {
       router.push('/choose-pair')
       return
     }
+
+    api.me().then(setMe).catch((err: { status?: number }) => {
+      // Only redirect to login on 401 — transient errors (500, network) keep the user on the page
+      // onUnauthorized() in get() already handles the hard redirect on 401,
+      // but we also push here in case that path doesn't fire (e.g. SSR context)
+      if (!err.status || err.status === 401) router.push('/onboarding/oauth')
+    })
 
     const onOnline = () => setOffline(false)
     const onOffline = () => setOffline(true)
@@ -235,12 +249,15 @@ export default function TranslatePage() {
       try {
         const res = await api.translate(trimmed, direction.from, direction.to)
         setResult(res)
-      } catch {
+      } catch (err) {
         setResult(null)
+        const status = (err as { status?: number }).status
+        if (status === 429) showToast('Daily limit reached — resets at midnight UTC')
+        else if (status === 503) showToast('Translation service unavailable — try again')
       } finally {
         setLoading(false)
       }
-    }, 300)
+    }, 500)
     return () => clearTimeout(timer)
   }, [query, direction, pair])
 
@@ -298,7 +315,7 @@ export default function TranslatePage() {
       }}
     >
       <AppHeader
-        subtitle="Good morning, Anna"
+        subtitle={me !== null ? greeting(me.name) : undefined}
         onPairSwitcherOpen={() => setPairSheetOpen(true)}
       />
 

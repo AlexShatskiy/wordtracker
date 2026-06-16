@@ -12,6 +12,8 @@ Bilingual EN ↔ RU dictionary PWA.
 
 ## Getting started
 
+See the full [Local Development Guide](docs/local-dev.md) for detailed setup instructions.
+
 **Prerequisites:** Node.js 22, pnpm 11, Python 3.11
 
 ```bash

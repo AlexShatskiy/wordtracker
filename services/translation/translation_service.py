@@ -28,23 +28,28 @@ def _canonical_pair(lang_a: str, lang_b: str) -> tuple[str, str]:
     return _LANG_NAMES[first], _LANG_NAMES[second]
 
 
-def _providers():
-    return [
-        (
+def _build_providers():
+    providers = []
+    if settings.gemini_api_key:
+        providers.append((
             ChatGoogleGenerativeAI(
-                model="gemini-1.5-flash",
+                model="gemini-3.1-flash-lite",
                 google_api_key=settings.gemini_api_key,
             ),
             "gemini",
-        ),
-        (
+        ))
+    if settings.groq_api_key:
+        providers.append((
             ChatGroq(
                 model="llama-3.1-8b-instant",
                 api_key=settings.groq_api_key,
             ),
             "groq",
-        ),
-    ]
+        ))
+    return providers
+
+
+_PROVIDERS = _build_providers()
 
 
 async def translate(term: str, lang: Lang, target_lang: Lang) -> tuple[LLMOutput, str]:
@@ -60,7 +65,7 @@ async def translate(term: str, lang: Lang, target_lang: Lang) -> tuple[LLMOutput
     }
 
     last_error: Exception | None = None
-    for llm, source_name in _providers():
+    for llm, source_name in _PROVIDERS:
         try:
             chain = _PROMPT | llm.with_structured_output(LLMOutput)
             result: LLMOutput = await chain.ainvoke(prompt_values)

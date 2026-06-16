@@ -21,6 +21,7 @@ export type SavedWord = TranslateResponse & {
 export type MeResponse = {
   id: string
   email: string
+  name: string | null
 }
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
@@ -42,7 +43,11 @@ async function post<T>(path: string, body: unknown): Promise<T> {
     onUnauthorized()
     throw new Error('Unauthorized')
   }
-  if (!res.ok) throw new Error(`POST ${path} failed: ${res.status}`)
+  if (!res.ok) {
+    const err = new Error(`POST ${path} failed: ${res.status}`) as Error & { status: number }
+    err.status = res.status
+    throw err
+  }
   return res.json() as Promise<T>
 }
 
@@ -52,7 +57,11 @@ async function get<T>(path: string): Promise<T> {
     onUnauthorized()
     throw new Error('Unauthorized')
   }
-  if (!res.ok) throw new Error(`GET ${path} failed: ${res.status}`)
+  if (!res.ok) {
+    const err = new Error(`GET ${path} failed: ${res.status}`) as Error & { status: number }
+    err.status = res.status
+    throw err
+  }
   return res.json() as Promise<T>
 }
 
@@ -65,7 +74,11 @@ async function del(path: string): Promise<void> {
     onUnauthorized()
     throw new Error('Unauthorized')
   }
-  if (!res.ok) throw new Error(`DELETE ${path} failed: ${res.status}`)
+  if (!res.ok) {
+    const err = new Error(`DELETE ${path} failed: ${res.status}`) as Error & { status: number }
+    err.status = res.status
+    throw err
+  }
 }
 
 export const api = {

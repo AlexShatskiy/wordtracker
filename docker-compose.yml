@@ -22,12 +22,15 @@ services:
     environment:
       PORT: "8000"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 10s
-      retries: 3
+      retries: 5
+      start_period: 15s
 
   backend:
-    build: ./apps/backend
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
     ports:
       - "3001:3001"
     env_file: ./apps/backend/.env
