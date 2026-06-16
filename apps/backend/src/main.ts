@@ -31,4 +31,7 @@ async function bootstrap() {
   await app.listen(port);
   new Logger('Bootstrap').log(`Backend running on :${port}`);
 }
-void bootstrap();
+bootstrap().catch((err) => {
+  console.error('Fatal startup error', err);
+  process.exit(1);
+});

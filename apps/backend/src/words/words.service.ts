@@ -22,12 +22,12 @@ export class WordsService {
     });
   }
 
-  async save(id: string): Promise<void> {
-    await this.prisma.word.update({ where: { id }, data: { saved: true } });
+  async save(id: string, userId: string): Promise<void> {
+    await this.prisma.word.update({ where: { id, userId }, data: { saved: true } });
   }
 
-  async unsave(id: string): Promise<void> {
-    await this.prisma.word.update({ where: { id }, data: { saved: false } });
+  async unsave(id: string, userId: string): Promise<void> {
+    await this.prisma.word.update({ where: { id, userId }, data: { saved: false } });
   }
 
   async listSaved(

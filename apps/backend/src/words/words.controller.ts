@@ -50,7 +50,7 @@ export class WordsController {
     const { sub: userId } = req.user as JwtPayload;
     const word = await this.words.getById(dto.id, userId);
     if (!word) throw new NotFoundException(`Word ${dto.id} not found`);
-    await this.words.save(dto.id);
+    await this.words.save(dto.id, userId);
     return { data: { id: dto.id, saved: true } };
   }
 
@@ -59,7 +59,7 @@ export class WordsController {
     const { sub: userId } = req.user as JwtPayload;
     const word = await this.words.getById(id, userId);
     if (!word) throw new NotFoundException(`Word ${id} not found`);
-    await this.words.unsave(id);
+    await this.words.unsave(id, userId);
     return { data: { id, saved: false } };
   }
 }

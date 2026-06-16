@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   Logger,
   ServiceUnavailableException,
@@ -62,7 +63,19 @@ export class TranslationClient {
         source: data.source,
       };
     } catch (err) {
-      this.logger.error(`Translation service error for term=${term}: ${err}`);
+      if (axios.isAxiosError(err) && err.response) {
+        const status = err.response.status;
+        this.logger.error(
+          `Translation service ${status} for term=${term}: ${JSON.stringify(err.response.data)}`,
+        );
+        if (status >= 400 && status < 500) {
+          throw new BadRequestException(
+            err.response.data?.detail ?? 'Invalid translation request',
+          );
+        }
+      } else {
+        this.logger.error(`Translation service unreachable for term=${term}: ${err}`);
+      }
       throw new ServiceUnavailableException('Translation service unavailable');
     }
   }

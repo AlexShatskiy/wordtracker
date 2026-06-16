@@ -69,4 +69,4 @@ async def translate(term: str, lang: Lang, target_lang: Lang) -> tuple[LLMOutput
             logger.warning("Provider %s failed for term=%r: %s", source_name, term, exc)
             last_error = exc
 
-    raise RuntimeError(f"All LLM providers failed. Last error: {last_error}")
+    raise RuntimeError(f"All LLM providers failed. Last error: {last_error}") from last_error

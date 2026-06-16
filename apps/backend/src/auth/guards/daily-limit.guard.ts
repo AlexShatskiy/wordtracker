@@ -8,8 +8,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
 import { JwtPayload } from '../strategies/jwt.strategy';
-
-type DailyEntry = { count: number; date: string };
+import { PrismaService } from '../../prisma/prisma.service';
 
 function todayUtc(): string {
   return new Date().toISOString().slice(0, 10);
@@ -18,27 +17,27 @@ function todayUtc(): string {
 @Injectable()
 export class DailyLimitGuard implements CanActivate {
   private readonly limit: number;
-  private readonly store = new Map<string, DailyEntry>();
 
-  constructor(config: ConfigService) {
+  constructor(
+    config: ConfigService,
+    private readonly prisma: PrismaService,
+  ) {
     this.limit = config.get<number>('DAILY_TRANSLATE_LIMIT', 10);
   }
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<Request>();
     const res = context.switchToHttp().getResponse<Response>();
-    const user = req.user as JwtPayload;
-    const userId = user.sub;
+    const { sub: userId } = req.user as JwtPayload;
     const today = todayUtc();
 
-    const entry = this.store.get(userId);
-    const current = entry?.date === today ? entry.count : 0;
+    const existing = await this.prisma.dailyUsage.findUnique({
+      where: { userId_date: { userId, date: today } },
+    });
+    const current = existing?.count ?? 0;
 
     res.setHeader('X-Daily-Limit', this.limit);
-    res.setHeader(
-      'X-Daily-Limit-Remaining',
-      Math.max(0, this.limit - current - 1),
-    );
+    res.setHeader('X-Daily-Limit-Remaining', Math.max(0, this.limit - current - 1));
 
     if (current >= this.limit) {
       throw new HttpException(
@@ -52,7 +51,12 @@ export class DailyLimitGuard implements CanActivate {
       );
     }
 
-    this.store.set(userId, { count: current + 1, date: today });
+    await this.prisma.dailyUsage.upsert({
+      where: { userId_date: { userId, date: today } },
+      create: { userId, date: today, count: 1 },
+      update: { count: { increment: 1 } },
+    });
+
     return true;
   }
 }

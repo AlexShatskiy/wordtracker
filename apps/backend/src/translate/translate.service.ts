@@ -34,12 +34,13 @@ export class TranslateService {
   ) {}
 
   async translate(dto: TranslateDto, userId: string) {
-    const lang = dto.lang ?? detectLang(dto.term);
+    const term = dto.term.trim().toLowerCase();
+    const lang = dto.lang ?? detectLang(term);
     const targetLang = dto.targetLang ?? defaultTarget(lang);
-    const translationId = `${dto.term.toLowerCase()}:${lang}:${targetLang}`;
+    const translationId = `${term}:${lang}:${targetLang}`;
 
     this.logger.log(
-      `[${getCorrelationId()}] term=${dto.term} lang=${lang}→${targetLang}`,
+      `[${getCorrelationId()}] term=${term} lang=${lang}→${targetLang}`,
     );
 
     // Check shared cache first — skip LLM if already translated by anyone
@@ -51,11 +52,11 @@ export class TranslateService {
     if (cached) {
       translation = cached;
     } else {
-      const result = await this.client.translate(dto.term, lang, targetLang);
+      const result = await this.client.translate(term, lang, targetLang);
       translation = await this.prisma.translation.create({
         data: {
           id: translationId,
-          term: dto.term,
+          term,
           lang,
           targetLang,
           translation: result.translation,

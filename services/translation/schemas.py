@@ -30,7 +30,7 @@ class TranslateRequest(BaseModel):
     def validate_term(cls, v: object) -> object:
         if not isinstance(v, str):
             return v
-        v = v.strip()
+        v = v.strip().lower()
         if not v:
             raise ValueError("term must not be empty or whitespace only")
         if _DANGEROUS_CHARS_RE.search(v):

@@ -54,6 +54,7 @@ export class AuthController {
   }
 
   @Get('logout')
+  @UseGuards(JwtAuthGuard)
   logout(@Res({ passthrough: true }) res: Response) {
     res.clearCookie(COOKIE_NAME, { path: '/' });
     return { ok: true };

@@ -69,18 +69,18 @@ describe('WordsService', () => {
 
   it('save updates saved=true', async () => {
     (prisma.word.update as jest.Mock).mockResolvedValue({});
-    await service.save(WORD_ID);
+    await service.save(WORD_ID, USER_ID);
     expect(prisma.word.update).toHaveBeenCalledWith({
-      where: { id: WORD_ID },
+      where: { id: WORD_ID, userId: USER_ID },
       data: { saved: true },
     });
   });
 
   it('unsave updates saved=false', async () => {
     (prisma.word.update as jest.Mock).mockResolvedValue({});
-    await service.unsave(WORD_ID);
+    await service.unsave(WORD_ID, USER_ID);
     expect(prisma.word.update).toHaveBeenCalledWith({
-      where: { id: WORD_ID },
+      where: { id: WORD_ID, userId: USER_ID },
       data: { saved: false },
     });
   });

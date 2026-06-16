@@ -47,3 +47,12 @@ model Word {
 
   @@index([userId, saved])
 }
+
+// Per-user daily translation usage counter. Resets naturally as new dates get new rows.
+model DailyUsage {
+  userId String
+  date   String  // YYYY-MM-DD UTC
+  count  Int     @default(0)
+
+  @@id([userId, date])
+}

@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
@@ -12,7 +13,11 @@ from router import router  # noqa: E402
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    settings.validate_keys()
+    try:
+        settings.validate_keys()
+    except ValueError as exc:
+        logging.critical("Startup failed — missing API keys: %s", exc)
+        raise
     yield
 
 
